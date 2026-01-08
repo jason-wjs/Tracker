@@ -1,0 +1,38 @@
+[build-system]
+requires = ["setuptools>=68", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "tracker"
+version = "0.1.0"
+description = "Motion-tracking RL tasks built on mjlab."
+readme = "README.md"
+requires-python = ">=3.10,<3.14"
+dependencies = [
+  "mjlab @ git+https://github.com/mujocolab/mjlab.git@63315069007df831c3f5fd9cbc2d057325097aa0",
+]
+
+[project.scripts]
+tracker-train = "tracker.cli.train:main"
+tracker-play = "tracker.cli.play:main"
+tracker-list-envs = "tracker.cli.list_envs:main"
+
+[project.entry-points."mjlab.tasks"]
+tracker = "tracker.tasks.register_all"
+
+[dependency-groups]
+dev = [
+  "pytest>=8.0.0",
+  "ruff>=0.5.0",
+  "pyright>=1.1.370",
+]
+
+[tool.setuptools]
+package-dir = {"" = "src"}
+include-package-data = true
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[tool.setuptools.package-data]
+tracker = ["assets/**"]

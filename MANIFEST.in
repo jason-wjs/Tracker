@@ -1,0 +1,11 @@
+prune .venv
+prune .uv-cache
+prune .tracker-cache
+prune .wandb
+prune artifacts
+prune logs
+prune dist
+prune build
+
+global-exclude *.py[cod]
+global-exclude __pycache__

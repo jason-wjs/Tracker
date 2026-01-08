@@ -1,1 +1,16 @@
 .worktrees/
+.venv/
+.uv-cache/
+.tracker-cache/
+.wandb/
+artifacts/
+logs/
+__pycache__/
+.pytest_cache/
+.ruff_cache/
+.mypy_cache/
+.pyright/
+dist/
+build/
+*.egg-info/
+.DS_Store
