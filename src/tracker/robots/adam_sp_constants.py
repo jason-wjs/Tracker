@@ -63,12 +63,44 @@ EFFORT_LIMIT_50_52_30_P = 46.0
 EFFORT_LIMIT_50_14A_50_S = 60.0
 EFFORT_LIMIT_30_14A_50_S = 17.5
 
+# Baseline joint frictionloss (dry friction) [N*m] for deployment-oriented DR.
+# mjlab's `physics_dof_frictionloss` term scales existing dof_frictionloss; if the
+# baseline is 0 everywhere, that DR term becomes a no-op.
+FRICTIONLOSS_LEG = 0.05
+FRICTIONLOSS_ANKLE = 0.02
+FRICTIONLOSS_WAIST = 0.03
+FRICTIONLOSS_SHOULDER = 0.02
+FRICTIONLOSS_ELBOW = 0.02
+
+# Baseline dof damping (viscous friction) [N*m*s/rad] for deployment-oriented DR.
+# mjlab's `physics_dof_damping` term scales existing dof_damping; if the baseline is
+# 0 everywhere, that DR term becomes a no-op.
+DOF_DAMPING_DEFAULT = 0.02
+
+
+def _baseline_joint_damping(joint_name: str) -> float:
+  if joint_name.startswith(("hipPitch_", "kneePitch_")):
+    return 0.05
+  if joint_name.startswith(("hipRoll_", "hipYaw_")):
+    return 0.03
+  if joint_name.startswith(("anklePitch_", "ankleRoll_")):
+    return 0.02
+  if joint_name.startswith("waist"):
+    return 0.02
+  if joint_name.startswith(("shoulderPitch_", "shoulderRoll_")):
+    return 0.02
+  if joint_name.startswith(("shoulderYaw_", "elbow_")):
+    return 0.02
+  return DOF_DAMPING_DEFAULT
+
+
 ADAM_SP_ACT_LEG_PITCH = BuiltinPositionActuatorCfg(
   target_names_expr=(r"hipPitch_.*", r"kneePitch_.*"),
   stiffness=STIFFNESS_130_92_7_P,
   damping=DAMPING_130_92_7_P,
   effort_limit=EFFORT_LIMIT_130_92_7_P,
   armature=ARMATURE_130_92_7_P,
+  frictionloss=FRICTIONLOSS_LEG,
 )
 
 ADAM_SP_ACT_LEG_ROLL = BuiltinPositionActuatorCfg(
@@ -77,6 +109,7 @@ ADAM_SP_ACT_LEG_ROLL = BuiltinPositionActuatorCfg(
   damping=DAMPING_80_20_30_S,
   effort_limit=EFFORT_LIMIT_80_20_30_S,
   armature=ARMATURE_80_20_30_S,
+  frictionloss=FRICTIONLOSS_LEG,
 )
 
 ADAM_SP_ACT_LEG_YAW = BuiltinPositionActuatorCfg(
@@ -85,6 +118,7 @@ ADAM_SP_ACT_LEG_YAW = BuiltinPositionActuatorCfg(
   damping=DAMPING_60_17_50_S,
   effort_limit=EFFORT_LIMIT_60_17_50_S,
   armature=ARMATURE_60_17_50_S,
+  frictionloss=FRICTIONLOSS_LEG,
 )
 
 ADAM_SP_ACT_ANKLE_PITCH = BuiltinPositionActuatorCfg(
@@ -93,6 +127,7 @@ ADAM_SP_ACT_ANKLE_PITCH = BuiltinPositionActuatorCfg(
   damping=DAMPING_50_52_30_P_ANKLE_PITCH,
   effort_limit=EFFORT_LIMIT_50_52_30_P,
   armature=ARMATURE_50_52_30_P,
+  frictionloss=FRICTIONLOSS_ANKLE,
 )
 
 ADAM_SP_ACT_ANKLE_ROLL = BuiltinPositionActuatorCfg(
@@ -101,6 +136,7 @@ ADAM_SP_ACT_ANKLE_ROLL = BuiltinPositionActuatorCfg(
   damping=DAMPING_50_52_30_P_ANKLE_ROLL,
   effort_limit=EFFORT_LIMIT_50_52_30_P,
   armature=ARMATURE_50_52_30_P,
+  frictionloss=FRICTIONLOSS_ANKLE,
 )
 
 ADAM_SP_ACT_WAIST_ROLL_YAW = BuiltinPositionActuatorCfg(
@@ -109,6 +145,7 @@ ADAM_SP_ACT_WAIST_ROLL_YAW = BuiltinPositionActuatorCfg(
   damping=DAMPING_60_17_50_S,
   effort_limit=EFFORT_LIMIT_60_17_50_S,
   armature=ARMATURE_60_17_50_S,
+  frictionloss=FRICTIONLOSS_WAIST,
 )
 
 ADAM_SP_ACT_WAIST_PITCH = BuiltinPositionActuatorCfg(
@@ -117,6 +154,7 @@ ADAM_SP_ACT_WAIST_PITCH = BuiltinPositionActuatorCfg(
   damping=DAMPING_60_17_50_S_WAIST_PITCH,
   effort_limit=EFFORT_LIMIT_60_17_50_S,
   armature=ARMATURE_60_17_50_S,
+  frictionloss=FRICTIONLOSS_WAIST,
 )
 
 ADAM_SP_ACT_SHOULDER = BuiltinPositionActuatorCfg(
@@ -125,6 +163,7 @@ ADAM_SP_ACT_SHOULDER = BuiltinPositionActuatorCfg(
   damping=DAMPING_50_14A_50_S,
   effort_limit=EFFORT_LIMIT_50_14A_50_S,
   armature=ARMATURE_50_14A_50_S,
+  frictionloss=FRICTIONLOSS_SHOULDER,
 )
 
 ADAM_SP_ACT_ELBOW = BuiltinPositionActuatorCfg(
@@ -133,6 +172,7 @@ ADAM_SP_ACT_ELBOW = BuiltinPositionActuatorCfg(
   damping=DAMPING_30_14A_50_S,
   effort_limit=EFFORT_LIMIT_30_14A_50_S,
   armature=ARMATURE_30_14A_50_S,
+  frictionloss=FRICTIONLOSS_ELBOW,
 )
 
 ADAM_SP_ARTICULATION = EntityArticulationInfoCfg(
@@ -219,6 +259,8 @@ def get_assets(meshdir: str) -> dict[str, bytes]:
 def get_spec() -> mujoco.MjSpec:
   spec = mujoco.MjSpec.from_file(str(ADAM_SP_XML))
   spec.assets = get_assets(spec.meshdir)
+  for joint_name in ADAM_SP_INIT_STATE.joint_pos:
+    spec.joint(joint_name).damping = _baseline_joint_damping(joint_name)
   return spec
 
 
