@@ -434,6 +434,7 @@ DAMPING_30_14A_50_S = 1.0
 - Adam-SP assets packaged into the wheel and resolved via `tracker.assets.paths.get_asset_path(...)`.
 - 29-DoF variant support (wrists enabled) including strict motion validation and safe qpos/qvel → joint-array conversion for offline datasets.
 - Domain randomization baseline recorded above and implemented in `tracker/src/tracker/tasks/tracking/env_cfg.py`.
+- Phase 1 is kept minimal: removed the unused placeholder module `tracker.motion` (Phase 2 will introduce the real motion abstraction layer).
 
 **Verified**
 - `uv run pytest -q` passes (smoke-level tests).
@@ -448,6 +449,7 @@ DAMPING_30_14A_50_S = 1.0
 - Offline dataset support as “one long `motion.npz`” with clip indexing/sampling utilities (after Phase 1 stability).
 - Multi-GPU training support (torchrunx / distributed) for larger runs.
 - Add a viewer/inspection helper (`tracker-view-robot` or equivalent) for fast asset validation and debugging.
+- Introduce `tracker.motion` as the central motion abstraction layer (source resolution, caching/normalization, dataset indexing, multi-clip sampling).
 
 **Robotics/dynamics evolution**
 - Calibrate Adam-SP wrist dynamics for the 29-DoF variant (armature/effort limits/gains are placeholders in Phase 1).
