@@ -86,8 +86,6 @@ def validate_motion_npz(path: Path) -> None:
     "body_quat_w",
     "body_lin_vel_w",
     "body_ang_vel_w",
-    "joint_names",
-    "body_names",
   )
   with np.load(path, allow_pickle=False) as data:
     missing = [k for k in required if k not in data]
@@ -98,19 +96,28 @@ def validate_motion_npz(path: Path) -> None:
     expected_joint_names = _expected_nonfree_joint_names(model)
     expected_body_names = _expected_body_names(model)
 
-    joint_names = [str(x) for x in data["joint_names"]]
-    if joint_names != expected_joint_names:
-      raise ValueError(
-        "joint_names mismatch for Adam-SP-29 (strict mode). "
-        f"Expected {len(expected_joint_names)} names, got {len(joint_names)}."
-      )
+    include_world_from_names: bool | None = None
+    if "joint_names" in data:
+      joint_names = [str(x) for x in data["joint_names"]]
+      if joint_names != expected_joint_names:
+        raise ValueError(
+          "joint_names mismatch for Adam-SP-29. "
+          f"Expected {len(expected_joint_names)} names, got {len(joint_names)}."
+        )
 
-    body_names = [str(x) for x in data["body_names"]]
-    if body_names != expected_body_names:
-      raise ValueError(
-        "body_names mismatch for Adam-SP-29 (strict mode). "
-        f"Expected {len(expected_body_names)} names, got {len(body_names)}."
-      )
+    if "body_names" in data:
+      body_names = [str(x) for x in data["body_names"]]
+      expected_body_names_no_world = expected_body_names[1:]
+      if body_names == expected_body_names:
+        include_world_from_names = True
+      elif body_names == expected_body_names_no_world:
+        include_world_from_names = False
+      else:
+        raise ValueError(
+          "body_names mismatch for Adam-SP-29. "
+          f"Expected {len(expected_body_names)} (with world) or {len(expected_body_names_no_world)} (no world) names, "
+          f"got {len(body_names)}."
+        )
 
     joint_pos = data["joint_pos"]
     joint_vel = data["joint_vel"]
@@ -134,6 +141,15 @@ def validate_motion_npz(path: Path) -> None:
         f"(expected (T, {expected_joint_dim}) or (T, nq={model.nq})/(T, nv={model.nv}))"
       )
 
+    expected_body_count_with_world = model.nbody
+    expected_body_count_no_world = model.nbody - 1
+    if include_world_from_names is True:
+      allowed_body_counts = {expected_body_count_with_world}
+    elif include_world_from_names is False:
+      allowed_body_counts = {expected_body_count_no_world}
+    else:
+      allowed_body_counts = {expected_body_count_with_world, expected_body_count_no_world}
+
     for key, dim in (
       ("body_pos_w", 3),
       ("body_quat_w", 4),
@@ -144,11 +160,11 @@ def validate_motion_npz(path: Path) -> None:
       if (
         arr.ndim != 3
         or arr.shape[0] != joint_pos.shape[0]
-        or arr.shape[1] != model.nbody
+        or arr.shape[1] not in allowed_body_counts
         or arr.shape[2] != dim
       ):
         raise ValueError(
-          f"Expected {key} shape (T, {model.nbody}, {dim}), got {arr.shape}"
+          f"Expected {key} shape (T, B, {dim}) with B in {sorted(allowed_body_counts)}, got {arr.shape}"
         )
 
 
