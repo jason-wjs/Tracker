@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import sys
+from dataclasses import replace
 from pathlib import Path
 
 import tyro
@@ -51,7 +52,7 @@ def run(task_id: str, argv: list[str]) -> None:
 
   if cfg.motion_file is not None:
     prepared_motion = prepare_motion_for_task(task_id, Path(cfg.motion_file))
-    cfg.motion_file = str(prepared_motion)
+    cfg = replace(cfg, motion_file=str(prepared_motion))
 
   run_play(task_id, cfg)
 

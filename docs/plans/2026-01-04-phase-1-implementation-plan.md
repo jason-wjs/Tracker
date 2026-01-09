@@ -4,6 +4,8 @@
 
 **Status (2026-01-08):** Phase 1 implemented + verified. This document is now a record of what was built and the baseline for Phase 2 planning.
 
+**Addendum (2026-01-09):** Adam-SP-29 hard-motion robustness work is planned below (collision simplification), because some aggressive offline clips can overflow mjlab’s fixed MJWarp contact/constraint buffers (`nconmax=35`, `njmax=250`). The fix must be in the robot collision model (do **not** change `nconmax/njmax`).
+
 **Goal:** Deliver a standalone `tracker` repo/package that registers Adam-SP tracking tasks into `mjlab`, provides `tracker-*` wrapper CLIs, supports training + play with either local `--motion-file` or W&B motion resolution (mutually exclusive), and packages Adam-SP assets (~100MB) as read-only runtime data.
 
 **Architecture:** `tracker` is an installable Python package (src layout) that plugs into `mjlab` via the `mjlab.tasks` entry point group. Task configs are motion-agnostic and patch `mjlab` tracking defaults; wrapper CLIs inject the selected motion source at runtime and delegate to `mjlab` CLIs where possible. Offline training uses a tracker-owned path to bypass `mjlab`’s W&B-only tracking motion resolution.
@@ -19,6 +21,7 @@
 - `tracker-train <task_id> --motion-file <local.npz>` runs on CPU/single GPU without requiring W&B motion download.
 - `tracker-train <task_id> --registry-name <wandb artifact>` delegates to `mjlab` train (mutual exclusion enforced vs `--motion-file`).
 - Adam-SP assets are loadable from an installed wheel (no absolute-path assumptions).
+- For the 29-DoF task, training on “hard” motions should not emit MJWarp buffer overflow warnings at scale (e.g., `--env.scene.num-envs 4096`) **without** increasing `nconmax/njmax`.
 
 ## Notes / Constraints
 - Do not modify `mjlab` source.
@@ -37,14 +40,16 @@ This is the current Adam-SP tracking DR setting implemented in `tracker/src/trac
 **Baseline events (from `mjlab` tracking):**
 - `push_robot` (interval): `(1.0, 3.0)` seconds; uses `VELOCITY_RANGE` with 6D components `x/y/z/roll/pitch/yaw`.
 - `encoder_bias` (startup): joint encoder bias `(-0.01, 0.01)` radians (per joint).
-- `foot_friction` (startup): `geom_friction` `operation="abs"` with range `(0.3, 1.2)` on `^toe(Left|Right)_collision$`.
+- `foot_friction` (startup): `geom_friction` `operation="abs"` with range `(0.3, 1.2)` on Adam-SP foot contact geoms:
+  - 23-DoF: `toeLeft_collision`, `toeRight_collision`
+  - 29-DoF: `left_foot*_collision`, `right_foot*_collision`
 - `base_com` (startup): `body_ipos` `operation="add"` on `("torso",)` with per-axis ranges `{0: (-0.02, 0.02), 1: (-0.02, 0.02), 2: (-0.02, 0.02)}` meters.
 
 **Added physics DR (startup):**
 - `link_com`: `body_ipos` `operation="add"` on the whitelist bodies below with x/y/z `(-0.02, 0.02)` meters.
 - `physics_body_mass`: `body_mass` `operation="scale"`, `distribution="uniform"`, range `(0.9, 1.1)` on the whitelist bodies below.
 - `physics_body_inertia`: `body_inertia` `operation="scale"`, `distribution="uniform"`, range `(0.9, 1.1)` on the whitelist bodies below.
-- `physics_dof_damping`: `dof_damping` `operation="scale"`, `distribution="uniform"`, range `(0.6, 1.4)` on all DOFs (currently no effect because the packaged MJCF has `dof_damping=0`).
+- `physics_dof_damping`: `dof_damping` `operation="scale"`, `distribution="uniform"`, range `(0.6, 1.4)` on all DOFs (effective because `tracker` sets a nonzero damping baseline via `spec.joint(...).damping`).
 - `physics_dof_frictionloss`: `dof_frictionloss` `operation="scale"`, `distribution="log_uniform"`, range `(0.2, 1.5)` on all DOFs (currently no effect because the packaged MJCF has `dof_frictionloss=0`).
 
 **Whitelist bodies used by `link_com` / `physics_body_mass` / `physics_body_inertia`:**
@@ -336,6 +341,52 @@ DAMPING_30_14A_50_S = 1.0
 
 ---
 
+### Task 9b: Adam-SP-29 collision optimization (G1-style primitives; hard-motion stable)
+
+**Motivation:** With aggressive 29-DoF offline clips (large torso tilt), the sim visits “fallen/scraping” states more often. Mesh-heavy collisions can generate too many contacts/constraints per-step and overflow mjlab’s fixed MJWarp buffers (`nconmax=35`, `njmax=250`). Since buffer sizes must remain unchanged, we must reduce worst-case contacts via a simplified collision model (G1-style).
+
+**Constraints (locked):**
+- Do **not** change mjlab tracking defaults, especially `SimulationCfg(nconmax=35, njmax=250)`.
+- Keep wrist DOFs enabled for the 29-DoF task, but disable wrist/hand collisions (wrists are controlled, but collisions are off).
+- Keep `adam_sp.xml` unchanged as the 23-DoF baseline until the 29-DoF variant is stable on hard clips; only then consider porting the collision approach back to 23-DoF.
+
+**Chosen collision strategy (locked):**
+- Foot collisions: **G1-like multi-capsule foot** (few simple contact geoms; no foot/toe mesh collisions).
+- Ground contacts: allow **pelvis + torso primitives** to collide with ground (avoid “ghost torso”).
+- Self-collision policy (Phase 1): **minimal** — disable broad self-collisions; re-enable selectively later if needed.
+
+**Implementation phases (gradual):**
+1) **Phase A — Restructure to match mjlab conventions (no behavior change)**
+   - Ensure all visual meshes are `contype=0 conaffinity=0`.
+   - Centralize collision defaults (e.g., `default class="collision"` like `g1.xml`).
+2) **Phase B — Replace foot collisions with primitives (high impact)**
+   - Add ~5–8 capsule geoms per foot (G1-style) and disable/remove toe/foot mesh collisions.
+   - Ensure `foot_friction` DR targets the new foot capsule geoms (and no longer targets disabled mesh collisions).
+3) **Phase C — Torso/pelvis primitives**
+   - Replace pelvis/torso collision meshes with a small set of capsules/boxes.
+4) **Phase D — Limbs primitives**
+   - Replace thigh/shin/upper-arm/forearm collision meshes with 1–2 capsules per link.
+5) **Phase E — Self-collision pruning**
+   - Add `<contact><exclude .../></contact>` for adjacent links and common “always-near” pairs (e.g., upper-arm↔torso) to prevent self-contact spam during falls.
+
+**Test/Verify (local):**
+- Run 29-DoF offline train on a “hard” clip at scale and confirm no overflow warnings:
+  - `uv run tracker-train Tracker-Tracking-Flat-Adam-SP-29 --motion-file <hard_clip.npz> --gpu-ids 0 --env.scene.num-envs 4096`
+
+**Status (2026-01-09):** Implemented a first-pass hard-motion-safe collision configuration for Adam-SP-29:
+- `adam_sp_29dof.xml`:
+  - Added G1-style multi-capsule feet (`left_foot*_collision`, `right_foot*_collision`).
+  - Capsule radius + layout is derived from the toe mesh AABB (`toeLeft.STL`, `toeRight.STL`) to avoid hand-tuned heuristics.
+  - Preserved `toeTip/heelPad/midfootPad` bodies for motion compatibility, but removed their collision geoms.
+  - Replaced `pelvis_collision` and `torso_collision` mesh collisions with simple box primitives (AABB-derived).
+- `adam_sp_29_constants.py`:
+  - For Phase 1 hard clips, enabled collisions only for: feet + pelvis + torso; disabled all other `*_collision` geoms.
+- Verified: `--env.scene.num-envs 4096` runs without MJWarp overflow warnings on `sub10_largebox_049_mj_fps50.npz` for a short smoke run (`--agent.max-iterations 1`).
+
+**Follow-up (Phase 2 candidate):** Gradually re-enable collisions (e.g., legs first) or replace limb collision meshes with capsules, keeping the no-overflow constraint.
+
+---
+
 ### Task 10: Minimal tests (smoke-level)
 
 **Files:**
@@ -414,4 +465,6 @@ DAMPING_30_14A_50_S = 1.0
   - Example:
     - `export http_proxy=http://127.0.0.1:7897 https_proxy=http://127.0.0.1:7897 all_proxy=http://127.0.0.1:7897`
     - `export HTTP_PROXY=$http_proxy HTTPS_PROXY=$https_proxy ALL_PROXY=$all_proxy`
-- **CUDA availability:** Current environment reports `torch.cuda.is_available() == False` (no visible GPU), so training runs on CPU unless CUDA drivers/devices are properly available.
+- **W&B logging (offline `--motion-file`):** `tracker` will fall back to TensorBoard if it cannot detect W&B credentials. After `wandb login`, credentials are typically stored in `~/.netrc` (not `WANDB_API_KEY`), so `tracker` must detect that; this was fixed in `tracker/src/tracker/integrations/mjlab/offline_train.py` (normalize `WANDB_API_HOST` to a URL with scheme before calling `wandb`’s netrc helper).
+- **CUDA availability:** Training requires a working CUDA setup for GPU runs; if `torch.cuda.is_available()` is false, offline training will fall back to CPU (much slower).
+- **MJWarp buffer overflows (29-DoF, hard clips):** Some aggressive 29-DoF clips can trigger `narrowphase/nefc overflow` warnings at scale due to collision complexity. See Task 9b (collision optimization) — do not “fix” by raising `nconmax/njmax`.

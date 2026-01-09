@@ -77,8 +77,8 @@ def adam_sp_flat_tracking_env_cfg(
   motion_cmd.body_names = TRACKING_BODY_NAMES
 
   cfg.events["foot_friction"].params["asset_cfg"].geom_names = (
-    r"^(toe(Left|Right)_collision|toeTip(Left|Right)_collision|"
-    r"heelPad(Left|Right)_collision|midfootPad(Left|Right)_collision)$"
+    r"^(toe(Left|Right)_collision|left_foot[0-9]+_collision|"
+    r"right_foot[0-9]+_collision)$"
   )
   cfg.events["base_com"].params["asset_cfg"].body_names = (TRACKING_ANCHOR_BODY,)
   cfg.events["base_com"].params["ranges"] = {
@@ -220,8 +220,8 @@ def adam_sp_29_flat_tracking_env_cfg(
   motion_cmd.body_names = TRACKING_BODY_NAMES_29
 
   cfg.events["foot_friction"].params["asset_cfg"].geom_names = (
-    r"^(toe(Left|Right)_collision|toeTip(Left|Right)_collision|"
-    r"heelPad(Left|Right)_collision|midfootPad(Left|Right)_collision)$"
+    r"^(toe(Left|Right)_collision|left_foot[0-9]+_collision|"
+    r"right_foot[0-9]+_collision)$"
   )
   cfg.events["base_com"].params["asset_cfg"].body_names = (TRACKING_ANCHOR_BODY_29,)
   cfg.events["base_com"].params["ranges"] = {

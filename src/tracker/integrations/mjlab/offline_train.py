@@ -28,6 +28,26 @@ def ensure_offline_safe_logging(
   If the config requests `wandb` logging but W&B isn't configured, we switch to
   `tensorboard` so offline training can run without W&B setup.
   """
+  def _wandb_is_configured() -> bool:
+    if env.get("WANDB_API_KEY"):
+      return True
+
+    # `wandb login` commonly writes credentials to `~/.netrc`; older installs may
+    # not export `WANDB_API_KEY`. Detect that case so we don't silently disable
+    # W&B logging even though the user is authenticated.
+    try:
+      from wandb.sdk.lib.auth import read_netrc_auth
+
+      host = env.get("WANDB_API_HOST", "api.wandb.ai")
+      # `wandb.sdk.lib.auth.read_netrc_auth()` expects a URL with a scheme
+      # (it uses `urlsplit(host).netloc`). `wandb login` stores the key under
+      # `machine api.wandb.ai`, so normalize accordingly.
+      if "://" not in host:
+        host = "https://" + host
+      return read_netrc_auth(host=host) is not None
+    except Exception:
+      return False
+
   if agent_cfg.logger != "wandb":
     return
 
@@ -40,9 +60,13 @@ def ensure_offline_safe_logging(
   if mode in ("offline", "dryrun"):
     return
 
-  if env.get("WANDB_API_KEY"):
+  if _wandb_is_configured():
     return
 
+  print(
+    "[INFO] W&B logging requested, but no W&B credentials detected "
+    "(set `WANDB_API_KEY` or run `wandb login`). Falling back to TensorBoard."
+  )
   agent_cfg.logger = "tensorboard"
 
 

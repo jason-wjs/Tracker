@@ -94,7 +94,20 @@ def validate_motion_npz(path: Path) -> None:
     ("body_ang_vel_w", 3),
   ):
     arr = data[key]
-    if arr.ndim != 3 or arr.shape[1] != expected_bodies or arr.shape[2] != dim:
+    if arr.ndim != 3 or arr.shape[2] != dim:
+      raise ValueError(f"Expected {key} shape (T, B, {dim}), got {arr.shape}")
+
+    # Motion files may store:
+    # - a tracking-body subset (legacy): (T, len(TRACKING_BODY_NAMES), D)
+    # - all robot bodies (common): (T, nbody_without_world, D)
+    # - sometimes including world: (T, nbody_with_world, D)
+    if arr.shape[1] == expected_bodies:
+      continue
+
+    model = constants.get_spec().compile()
+    expected_full_bodies = {model.nbody - 1, model.nbody}
+    if arr.shape[1] not in expected_full_bodies:
+      expected_str = ", ".join(map(str, sorted({expected_bodies, *expected_full_bodies})))
       raise ValueError(
-        f"Expected {key} shape (T, {expected_bodies}, {dim}), got {arr.shape}"
+        f"Expected {key} shape (T, B, {dim}) with B in {{{expected_str}}}, got {arr.shape}"
       )

@@ -254,10 +254,23 @@ ADAM_SP_29_COLLISIONS = (
   CollisionCfg(
     geom_names_expr=(r".*_collision",),
     disable_other_geoms=True,
-    contype={r"^(L_|R_).*_collision$": 0, r".*_collision$": 1},
-    conaffinity={r"^(L_|R_).*_collision$": 0, r".*_collision$": 1},
-    priority={r"^(toeLeft_collision|toeRight_collision)$": 1, r".*_collision$": 0},
-    friction={r"^(toeLeft_collision|toeRight_collision)$": (0.6,)},
+    contype={
+      # Phase 1 hard-motion robustness:
+      # Keep only feet + pelvis/torso collisions enabled to reduce worst-case contact
+      # counts (mjwarp uses fixed buffers via mjlab defaults, so we must reduce
+      # contacts/constraints in the model rather than increasing njmax/nconmax).
+      r"^(left_foot[0-9]+_collision|right_foot[0-9]+_collision|pelvis_collision|torso_collision)$": 1,
+      r".*_collision$": 0,
+    },
+    conaffinity={
+      r"^(left_foot[0-9]+_collision|right_foot[0-9]+_collision|pelvis_collision|torso_collision)$": 1,
+      r".*_collision$": 0,
+    },
+    priority={
+      r"^(left_foot[0-9]+_collision|right_foot[0-9]+_collision)$": 1,
+      r".*_collision$": 0,
+    },
+    friction={r"^(left_foot[0-9]+_collision|right_foot[0-9]+_collision)$": (0.6,)},
   ),
 )
 
