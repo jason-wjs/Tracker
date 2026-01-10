@@ -22,7 +22,7 @@ Notes:
 - Use `--gpu-ids 0` for CUDA:0, or `--gpu-ids None` for CPU.
 - Local caches/logs are untracked: `.uv-cache/`, `.venv/`, `.wandb/`, `.tracker-cache/`, `logs/`, `artifacts/`.
 
-## List environments
+## List all environments (task_ids)
 
 ```bash
 tracker-list-envs
