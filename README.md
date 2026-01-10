@@ -1,10 +1,12 @@
 # tracker
 
-Motion-tracking RL tasks built on top of [`mjlab`](https://github.com/mujocolab/mjlab.git).
+Universal Motion-Tracker built on top of [`mjlab`](https://github.com/mujocolab/mjlab.git). 
 
 This branch (`phase-1`) is a minimal, usable snapshot focused on Adam-SP motion tracking:
 - Registers two tracking tasks: `Tracker-Tracking-Flat-Adam-SP-23` and `Tracker-Tracking-Flat-Adam-SP-29`
 - Provides wrapper CLIs: `tracker-list-envs`, `tracker-train`, `tracker-play`
+- Plugin-and-use workflow: provide a preprocessed `motion.npz` and run (this repo does not focus on retargeting)
+- Lightweight by design: `tracker` is a thin layer on top of `mjlab` (task registration + configs + assets), reusing mjlab’s control logic
 - Supports both motion sources (mutually exclusive): `--motion-file` (offline) or `--registry-name` (W&B artifact)
 - Includes a tracker-owned offline training path (so offline training does not depend on W&B motion resolution)
 - Packages Adam-SP assets in the wheel and resolves them at runtime (no absolute paths / CWD assumptions)
