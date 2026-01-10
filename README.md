@@ -25,7 +25,7 @@ Notes:
 ## List all environments (task_ids)
 
 ```bash
-tracker-list-envs
+uv run tracker-list-envs
 ```
 
 ## Play
