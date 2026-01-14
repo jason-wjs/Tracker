@@ -9,3 +9,7 @@ prune build
 
 global-exclude *.py[cod]
 global-exclude __pycache__
+
+# Local-only reference assets (do not distribute).
+exclude src/tracker/assets/adam_pro/adam_pro_stl.xml
+exclude src/tracker/assets/adam_pro/adam_pro.urdf

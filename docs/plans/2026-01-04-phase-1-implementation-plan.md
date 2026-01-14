@@ -2,7 +2,7 @@
 
 > **For Claude/ Codex:** REQUIRED SUB-SKILL: Use superpowers:executing-plans to implement this plan task-by-task.
 
-**Status (2026-01-08):** Phase 1 implemented + verified. This document is now a record of what was built and the baseline for Phase 2 planning.
+**Status (2026-01-08):** Phase 1 implemented + verified. This document is now a record of what was built and the baseline for Phase 1.5/Phase 2 planning.
 
 **Addendum (2026-01-09):** Adam-SP-29 hard-motion robustness work is planned below (collision simplification), because some aggressive offline clips can overflow mjlab’s fixed MJWarp contact/constraint buffers (`nconmax=35`, `njmax=250`). The fix must be in the robot collision model (do **not** change `nconmax/njmax`).
 
@@ -30,7 +30,7 @@
 - Assets are read-only runtime inputs once `adam_sp_constants.py` is established.
 - For faithful MuJoCo dynamics, Adam-SP must define motor reflected inertia (`armature`) explicitly (do not rely on missing/zero values in the MJCF).
 - Repo hygiene: do not commit local caches/venvs (`.venv/`, `.uv-cache/`, `.wandb/`, `.tracker-cache/`, `logs/`, `artifacts/`, `dist/`); keep `UV_CACHE_DIR` inside the repo for sandbox safety.
-- Phase 2 (deferred): add a viewer/inspection helper (either `__main__` block or a `tracker-view-robot` CLI) to quickly validate assets, collisions, and actuator edits interactively.
+- Phase 1.5: add a viewer/inspection helper (either `__main__` block or a `tracker-view-robot` CLI) to quickly validate assets, collisions, and actuator edits interactively.
 - Newer offline datasets may target a 29-DoF Adam-SP variant (wrists enabled). Treat this as a separate task ID + separate robot/MJCF variant (Task 9).
 
 ## Domain Randomization (Current Phase 1 Setting)
@@ -442,17 +442,48 @@ DAMPING_30_14A_50_S = 1.0
 - W&B motion artifact path works with `--registry-name` (delegates to `mjlab`).
 - `uv build` wheel installs and resolves assets (Task 11 verification above).
 
-## Phase 2 Planning Seed (Draft)
+## Phase 1.5 Planning Seed (Draft)
+
+**Intent**
+- Bridge Phase 1 → Phase 2 by making the codebase comfortable for adding robots/variants and by shipping a second robot family (`adam_pro`) end-to-end.
+- Keep Phase 2’s north star focused on multi-clip training (sampling across many clips within one run).
 
 **Primary goals**
-- Multi-clip sampling within one run (Phase 1 is “one run per clip”; Phase 2 adds sampling across many clips).
-- Offline dataset support as “one long `motion.npz`” with clip indexing/sampling utilities (after Phase 1 stability).
-- Multi-GPU training support (torchrunx / distributed) for larger runs.
-- Add a viewer/inspection helper (`tracker-view-robot` or equivalent) for fast asset validation and debugging.
+- Add `adam_pro` robot support with two DoF variants (mirrors Adam-SP structure):
+  - `Tracker-Tracking-Flat-Adam-Pro-23`
+  - `Tracker-Tracking-Flat-Adam-Pro-29`
+- Strict motion compatibility for `adam_pro`:
+  - motion `.npz` must match the MJCF joint/body ordering exactly (no name-based reordering).
+- Calibrate 29-DoF wrist dynamics for both robot families:
+  - Adam-SP-29: finalize wrist `armature` / effort limits / PD gains (Phase 1 uses placeholders).
+  - Adam-Pro-29: establish matching wrist dynamics baselines (no placeholders in Phase 1.5 “done”).
+  - Calibration definition (Phase 1.5): values come from a trusted source (e.g., URDF/CAD/datasheet baselines) and are encoded as explicit constants/config (not ad-hoc tuned).
+- Minimal multi-robot architecture refactor to avoid task/robot-specific branching:
+  - Replace hard-coded `task_id -> validate/prepare` logic in CLI with a single registry/dispatch table.
+  - Factor shared “patch mjlab tracking env cfg” logic so new robots add a small robot module + task registration only.
+- Add a viewer/inspection helper for fast iteration on new assets (collisions, actuators, keyframes, contact debug).
+
+**Acceptance criteria (“Done”)**
+- `tracker-list-envs` lists Adam-SP and Adam-Pro task IDs (23/29 for each).
+- `tracker-play Tracker-Tracking-Flat-Adam-Pro-23 --motion-file <local.npz>` runs and validates motion schema before start.
+- `tracker-train Tracker-Tracking-Flat-Adam-Pro-29 --motion-file <local.npz>` runs via the offline training path (CPU/single GPU).
+- `tracker-play Tracker-Tracking-Flat-Adam-Pro-23 --registry-name <wandb artifact>` delegates to `mjlab` with mutual exclusion enforced vs `--motion-file`.
+- `tracker-view-robot --robot-id adam_pro --variant 23` (exact CLI TBD) loads and renders without requiring code edits.
+- Wrist dynamics for both `*-29` variants are no longer placeholders: `armature` / PD gains / effort limits are explicitly specified from a trusted baseline source.
+
+## Phase 2 Planning Seed (Draft)
+
+**North star**
+- Multi-clip training within one run (Phase 1 is “one run per clip”; Phase 2 adds sampling across many clips).
+
+**Primary goals**
 - Introduce `tracker.motion` as the central motion abstraction layer (source resolution, caching/normalization, dataset indexing, multi-clip sampling).
+- Clip sampling primitives (clip index metadata, per-episode sampling, reproducible seeding).
+- Offline dataset support as “one long `motion.npz`” with clip indexing/sampling utilities.
+- Training/runtime plumbing to make multi-clip sampling first-class (logging, evaluation, curriculum knobs).
+- Multi-GPU training support (torchrunx / distributed) if needed for larger multi-clip runs.
 
 **Robotics/dynamics evolution**
-- Calibrate Adam-SP wrist dynamics for the 29-DoF variant (armature/effort limits/gains are placeholders in Phase 1).
 - Decide whether to introduce nonzero MJCF `dof_damping` / `dof_frictionloss` (currently 0 in assets, so related DR terms have no effect).
 
 **Extensibility / structure**

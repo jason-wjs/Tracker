@@ -6,6 +6,11 @@ Modifications:
   - Refactored geoms into 'visual' (group 2) and 'collision' (group 3) classes.
   - Added material definitions (silver, white) and assignments.
   - Standardized default classes structure. -->
+<!-- Collision notes (2026-01-14):
+  - Collision defaults are set to world-only (contype=0, conaffinity=1) to disable self-collision.
+  - Trunk collision uses simple box primitives (pelvis/torso) to reduce mesh contact explosion.
+  - Feet collisions use G1-style multi-capsule geoms (left_foot*/right_foot*) to reduce worst-case contact counts.
+-->
   <compiler angle="radian" meshdir="meshes" autolimits="true"/>
 
   <default>
@@ -14,7 +19,12 @@ Modifications:
         <geom group="2" type="mesh" density="0" contype="0" conaffinity="0"/>
       </default>
       <default class="collision">
-        <geom group="3" type="mesh" contype="1" conaffinity="1"/>
+        <!-- World collisions only (no self-collision): matches mjlab `FULL_COLLISION_WITHOUT_SELF` pattern. -->
+        <geom group="3" type="mesh" contype="0" conaffinity="1"/>
+        <!-- G1-style foot capsules to reduce worst-case contact counts. -->
+        <default class="foot_capsule">
+          <geom type="capsule" size="0.009894"/>
+        </default>
       </default>
       <site group="5" rgba="1 0 0 1"/>
     </default>
@@ -86,7 +96,8 @@ Modifications:
       <inertial pos="-0.000347206 0 -0.00735688" quat="0.497146 0.497124 -0.502857 0.502841" mass="10.3575" diaginertia="0.0688803 0.0622175 0.0346152" />
       <joint name="floating_base" type="free" limited="false" actuatorfrclimited="false" />
       <geom class="visual" mesh="pelvis" material="silver" />
-      <geom class="collision" name="pelvis_collision" mesh="pelvis" />
+      <!-- Simple primitives for trunk to avoid mesh contact explosions. -->
+      <geom class="collision" name="pelvis_collision" type="box" size="0.104 0.144 0.088" pos="-0.0053 0 -0.0066" />
       <!-- IMU site for base state estimation -->
       <site name="imu" size="0.01" pos="0 0 0"/>
       <body name="hipPitchLeft" pos="0 0.0961925 -0.0332412" quat="0.953717 -0.300706 0 0">
@@ -118,7 +129,11 @@ Modifications:
                   <inertial pos="0.0374997 -4.016e-05 -0.0419674" quat="0.00341207 0.66841 -0.00284521 0.74378" mass="0.634796" diaginertia="0.0023347 0.00226908 0.000434692" />
                   <joint name="ankleRoll_Left" pos="0 0 0" axis="1 0 0" range="-0.3491 0.3491" actuatorfrcrange="-12 12" />
                 <geom class="visual" mesh="toeLeft" material="silver" />
-                <geom class="collision" name="toeLeft_collision" mesh="toeLeft" />
+                <geom class="foot_capsule" name="left_foot1_collision" fromto="-0.063633 -0.039224 -0.054562 0.158693 -0.039224 -0.054562" />
+                <geom class="foot_capsule" name="left_foot2_collision" fromto="-0.063633 -0.019437 -0.054562 0.158693 -0.019437 -0.054562" />
+                <geom class="foot_capsule" name="left_foot3_collision" fromto="-0.063633 0.000351 -0.054562 0.158693 0.000351 -0.054562" />
+                <geom class="foot_capsule" name="left_foot4_collision" fromto="-0.063633 0.020138 -0.054562 0.158693 0.020138 -0.054562" />
+                <geom class="foot_capsule" name="left_foot5_collision" fromto="-0.063633 0.039925 -0.054562 0.158693 0.039925 -0.054562" />
                 </body>
               </body>
             </body>
@@ -154,7 +169,11 @@ Modifications:
                   <inertial pos="0.0375023 4.002e-05 -0.0419671" quat="-0.00346801 0.668408 0.00279542 0.743782" mass="0.634808" diaginertia="0.0023347 0.00226908 0.00043472" />
                   <joint name="ankleRoll_Right" pos="0 0 0" axis="1 0 0" range="-0.3491 0.3491" actuatorfrcrange="-12 12" />
                 <geom class="visual" mesh="toeRight" material="silver" />
-                <geom class="collision" name="toeRight_collision" mesh="toeRight" />
+                <geom class="foot_capsule" name="right_foot1_collision" fromto="-0.063633 -0.039925 -0.054562 0.158614 -0.039925 -0.054562" />
+                <geom class="foot_capsule" name="right_foot2_collision" fromto="-0.063633 -0.020138 -0.054562 0.158614 -0.020138 -0.054562" />
+                <geom class="foot_capsule" name="right_foot3_collision" fromto="-0.063633 -0.000351 -0.054562 0.158614 -0.000351 -0.054562" />
+                <geom class="foot_capsule" name="right_foot4_collision" fromto="-0.063633 0.019437 -0.054562 0.158614 0.019437 -0.054562" />
+                <geom class="foot_capsule" name="right_foot5_collision" fromto="-0.063633 0.039224 -0.054562 0.158614 0.039224 -0.054562" />
                 </body>
               </body>
             </body>
@@ -175,7 +194,7 @@ Modifications:
             <inertial pos="-3.545e-05 0.00048442 0.185924" quat="0.999918 -0.00116744 -0.012015 -0.00434505" mass="13.4634" diaginertia="0.211446 0.168649 0.0770068" />
             <joint name="waistYaw" pos="0 0 0" axis="0 0 1" range="-0.829 0.829" actuatorfrcrange="-110 110" />
             <geom class="visual" mesh="torso" material="silver" />
-            <geom class="collision" name="torso_collision" mesh="torso" />
+            <geom class="collision" name="torso_collision" type="box" size="0.105 0.171 0.284" pos="0.0207 0 0.2816" />
             <body name="shoulderPitchLeft" pos="0 0.165094 0.25923" quat="0.984808 0.173648 0 0">
               <inertial pos="0.00542694 0.0268987 0.00010792" quat="0.0525836 0.7027 -0.0564441 0.707292" mass="0.216148" diaginertia="0.000380649 0.000322752 0.000187229" />
               <joint name="shoulderPitch_Left" pos="0 0 0" axis="0 1 0" range="-3.613 2.042" actuatorfrcrange="-65 65" />

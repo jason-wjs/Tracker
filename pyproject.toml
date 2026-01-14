@@ -16,6 +16,7 @@ dependencies = [
 tracker-train = "tracker.cli.train:main"
 tracker-play = "tracker.cli.play:main"
 tracker-list-envs = "tracker.cli.list_envs:main"
+tracker-view-robot = "tracker.cli.view_robot:main"
 
 [project.entry-points."mjlab.tasks"]
 tracker = "tracker.tasks.register_all"
@@ -36,3 +37,9 @@ where = ["src"]
 
 [tool.setuptools.package-data]
 tracker = ["assets/**"]
+
+[tool.setuptools.exclude-package-data]
+tracker = [
+  "assets/adam_pro/adam_pro_stl.xml",
+  "assets/adam_pro/adam_pro.urdf",
+]

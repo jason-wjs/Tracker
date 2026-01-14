@@ -12,3 +12,5 @@ def test_bootstrap_registers_adam_sp_task():
   tasks = set(list_tasks())
   assert "Tracker-Tracking-Flat-Adam-SP-23" in tasks
   assert "Tracker-Tracking-Flat-Adam-SP-29" in tasks
+  assert "Tracker-Tracking-Flat-Adam-Pro-23" in tasks
+  assert "Tracker-Tracking-Flat-Adam-Pro-29" in tasks

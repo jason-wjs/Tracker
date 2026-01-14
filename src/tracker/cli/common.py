@@ -4,8 +4,7 @@ import sys
 from pathlib import Path
 from typing import Iterable
 
-TASK_ID_ADAM_SP_23 = "Tracker-Tracking-Flat-Adam-SP-23"
-TASK_ID_ADAM_SP_29 = "Tracker-Tracking-Flat-Adam-SP-29"
+from tracker.robots.registry import TASK_ID_ADAM_SP_23, TASK_ID_ADAM_SP_29, get_adapter_for_task_id
 
 
 def split_task_id(argv: list[str]) -> tuple[str, list[str]]:
@@ -54,26 +53,17 @@ def get_registry_name(argv: list[str]) -> str | None:
 
 
 def validate_motion_for_task(task_id: str, motion_file: Path) -> None:
-  if task_id == TASK_ID_ADAM_SP_29:
-    from tracker.robots.adam_sp_29 import validate_motion_npz
+  try:
+    adapter = get_adapter_for_task_id(task_id)
+  except ValueError as exc:
+    raise ValueError(f"Unknown robot for task_id={task_id!r}; cannot validate motion") from exc
 
-    validate_motion_npz(motion_file)
-    return
-
-  if task_id == TASK_ID_ADAM_SP_23:
-    from tracker.robots.adam_sp import validate_motion_npz
-
-    validate_motion_npz(motion_file)
-    return
-
-  raise ValueError(f"Unknown robot for task_id={task_id!r}; cannot validate motion")
+  adapter.validate_motion_npz(motion_file)
 
 
 def prepare_motion_for_task(task_id: str, motion_file: Path) -> Path:
   """Prepare a motion file for consumption by mjlab (may rewrite to a cached file)."""
-  if task_id == TASK_ID_ADAM_SP_29:
-    from tracker.robots.adam_sp_29 import prepare_motion_npz
-
-    return prepare_motion_npz(motion_file)
-
-  return motion_file
+  adapter = get_adapter_for_task_id(task_id)
+  if adapter.prepare_motion_npz is None:
+    return motion_file
+  return adapter.prepare_motion_npz(motion_file)

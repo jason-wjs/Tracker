@@ -1,7 +1,7 @@
-"""RL configuration for Adam-SP tracking tasks.
+"""RL configuration for tracker motion-tracking tasks.
 
-Currently identical to mjlab's default PPO config for G1, with per-task
-`experiment_name` to avoid log collisions between variants.
+This module must remain import-safe: it defines runner config builders, but it
+should not register tasks at import time.
 """
 
 from mjlab.rl import (
@@ -48,3 +48,18 @@ def adam_sp_29_tracking_ppo_runner_cfg() -> RslRlOnPolicyRunnerCfg:
   cfg = adam_sp_23_tracking_ppo_runner_cfg()
   cfg.experiment_name = "adam_sp_tracking_29"
   return cfg
+
+
+def adam_pro_23_tracking_ppo_runner_cfg() -> RslRlOnPolicyRunnerCfg:
+  """Create RL runner configuration for Adam-Pro (23-DoF) tracking task."""
+  cfg = adam_sp_23_tracking_ppo_runner_cfg()
+  cfg.experiment_name = "adam_pro_tracking_23"
+  return cfg
+
+
+def adam_pro_29_tracking_ppo_runner_cfg() -> RslRlOnPolicyRunnerCfg:
+  """Create RL runner configuration for Adam-Pro (29-DoF) tracking task."""
+  cfg = adam_sp_23_tracking_ppo_runner_cfg()
+  cfg.experiment_name = "adam_pro_tracking_29"
+  return cfg
+

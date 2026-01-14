@@ -14,3 +14,7 @@ dist/
 build/
 *.egg-info/
 .DS_Store
+
+# Reference-only (not committed): used to refine Adam-Pro MJCFs locally.
+src/tracker/assets/adam_pro/adam_pro_stl.xml
+src/tracker/assets/adam_pro/adam_pro.urdf

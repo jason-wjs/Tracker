@@ -52,6 +52,15 @@ def test_offline_train_disables_wandb_by_default(monkeypatch):
   monkeypatch.delenv("WANDB_MODE", raising=False)
   monkeypatch.delenv("WANDB_DISABLED", raising=False)
 
+  # Ensure this test is hermetic even if the developer has `wandb login` creds in
+  # `~/.netrc` (which `ensure_offline_safe_logging()` treats as "configured").
+  try:
+    from wandb.sdk.lib import auth as wandb_auth
+
+    monkeypatch.setattr(wandb_auth, "read_netrc_auth", lambda host=None: None)
+  except Exception:
+    pass
+
   agent = RslRlOnPolicyRunnerCfg(logger="wandb")
   ensure_offline_safe_logging(agent, env=os.environ)
   assert agent.logger == "tensorboard"
