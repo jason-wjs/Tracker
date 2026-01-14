@@ -1,69 +1,58 @@
 # tracker
 
-A lightweight Universal Motion Tracker built on top of [`mjlab`](https://github.com/mujocolab/mjlab.git). 
+**Lightweight whole-body motion tracking for the Adam-SP robot family.**
 
-This branch (`phase-1`) is a minimal, usable snapshot focused on Adam-SP motion tracking:
-- Registers two tracking tasks: `Tracker-Tracking-Flat-Adam-SP-23` and `Tracker-Tracking-Flat-Adam-SP-29`
-- Provides wrapper CLIs: `tracker-list-envs`, `tracker-train`, `tracker-play`
-- Includes a tracker-owned offline training path (so offline training does not depend on W&B motion resolution)
-- Packages Adam-SP assets in the wheel and resolves them at runtime (no absolute paths / CWD assumptions)
-- 29-DoF motions are validated strictly against the 29-DoF asset ordering; some `qpos/qvel` formats are auto-converted for offline use
-- Plugin-and-use workflow: provide a preprocessed motion.npz and run (this repo does not focus on retargeting)
+`tracker` is a specialized task package built on top of [`mjlab`](https://github.com/mujocolab/mjlab.git), designed for high-fidelity motion tracking. This branch (`phase-1`) provides a stable snapshot focused on the Adam-SP robot family, offering a streamlined workflow for training tracking policies from preprocessed motion data.
 
-What to expect in Phase 2 (planned): multi-clip sampling within one run, “one long motion.npz” dataset support, multi-GPU training, and a viewer/inspection helper for fast asset validation.
+## Core Features (Phase 1)
+
+Designed for modularity and ease of use, this snapshot includes:
+- **Adam-SP Support**: Registered environments for both 23-DOF and 29-DOF Adam-SP configurations.
+- **Self-Contained Assets**: Robot MJCFs and meshes are packaged with the library and resolved at runtime.
+- **Workflow Utilities**: Specialized CLIs for environment listing, policy training, and playback.
+- **Data Validation**: Strict validation for 29-DOF motion files, including automatic `qpos/qvel` normalization.
+- **Offline Training**: Direct support for trained policies via `--motion-file` without external dependencies.
 
 ## Setup
 
+### Installation
+Initialize the environment using `uv`:
 ```bash
 UV_CACHE_DIR=$PWD/.uv-cache uv sync --group dev --frozen
 ```
 
-Notes:
-- Use `--gpu-ids 0` for CUDA:0, or `--gpu-ids None` for CPU.
-- Local caches/logs are untracked: `.uv-cache/`, `.venv/`, `.wandb/`, `.tracker-cache/`, `logs/`, `artifacts/`.
+### Technical Notes
+- **Hardware**: Set `--gpu-ids 0` for CUDA acceleration or `None` for CPU execution.
+- **Caches**: Directories such as `.uv-cache/`, `.venv/`, and `.tracker-cache/` are untracked and should be kept local.
 
-## List all environments (task_ids)
+## Usage Guide
 
+### 1. List Environments
+Discover available task IDs and robot configurations:
 ```bash
 uv run tracker-list-envs
 ```
 
-## Play
-
+### 2. Evaluate Policies (Play)
+Run a trained checkpoint against a specific motion:
 ```bash
 uv run tracker-play <task_id> \
   --checkpoint-file /path/to/checkpoint.pt  \
   --motion-file /path/to/motion.npz \
-  --gpu-ids 0 \
-  --num-envs 8
-# or:
-uv run tracker-play <task_id> \
-  --registry-name <entity/project/motions:alias> \
-  --gpu-ids 0 \
-  --num-envs 8
+  --gpu-ids 0 --num-envs 8
 ```
 
-
-
-## Train
-
+### 3. Train Policies
+Launch RL training for motion tracking:
 ```bash
 uv run tracker-train <task_id> \
     --motion-file /path/to/motion.npz \
     --gpu-ids 0 \
     --agent.logger wandb \
-    --agent.wandb-project <your-project> \
-    --agent.max-iterations 10000 \
-    --env.scene.num-envs 4096
-# or:
-uv run tracker-train <task_id> \ 
-    --registry-name <entity/project/motions:alias> \
-    --gpu-ids 0 \
+    --agent.wandb-project <project-name> \
     --agent.max-iterations 10000 \
     --env.scene.num-envs 4096
 ```
 
-`--motion-file` and `--registry-name` are mutually exclusive.
-
-
-
+---
+*Looking ahead: Phase 2 will introduce multi-clip sampling, multi-GPU training support, and enhanced asset validation tools.*
