@@ -29,7 +29,7 @@ Last updated: 2026-01-14
   - Collision defaults are set to world-only (contype=0, conaffinity=1) to disable self-collision.
   - Trunk collision uses simple box primitives (pelvis/torso) to reduce mesh contact explosion.
   - Feet collisions use G1-style multi-capsule geoms (left_foot*/right_foot*) to reduce worst-case contact counts.
-  - Added 6 foot contact bodies (toeTip/heelPad/midfootPad x2) to match adam_sp's 60-body structure.
+  - Toe contact marker sub-bodies (toeTip/heelPad/midfootPad) removed to match reference toe structure (adam_pro_stl.xml).
   - Neck bodies commented out for adam_sp motion data compatibility (60 bodies total).
 -->
   <compiler angle="radian" meshdir="meshes" autolimits="true"/>
@@ -187,12 +187,6 @@ Last updated: 2026-01-14
                   <geom class="foot_capsule" name="left_foot3_collision" fromto="-0.063633 0.000351 -0.054562 0.158693 0.000351 -0.054562"/>
                   <geom class="foot_capsule" name="left_foot4_collision" fromto="-0.063633 0.020138 -0.054562 0.158693 0.020138 -0.054562"/>
                   <geom class="foot_capsule" name="left_foot5_collision" fromto="-0.063633 0.039925 -0.054562 0.158693 0.039925 -0.054562"/>
-                  <!-- Foot contact bodies for motion data compatibility (matches adam_sp structure) -->
-                  <body name="toeTipLeft" pos="0.17 0 0">
-                    <inertial pos="0 0 0" mass="0.01" diaginertia="1e-6 1e-6 1e-6"/>
-                  </body>
-                  <body name="heelPadLeft" pos="-0.06 0 0"/>
-                  <body name="midfootPadLeft" pos="0.05 0 0"/>
                 </body>
               </body>
             </body>
@@ -256,12 +250,6 @@ Last updated: 2026-01-14
                   <geom class="foot_capsule" name="right_foot3_collision" fromto="-0.063633 -0.000351 -0.054562 0.158614 -0.000351 -0.054562"/>
                   <geom class="foot_capsule" name="right_foot4_collision" fromto="-0.063633 0.019437 -0.054562 0.158614 0.019437 -0.054562"/>
                   <geom class="foot_capsule" name="right_foot5_collision" fromto="-0.063633 0.039224 -0.054562 0.158614 0.039224 -0.054562"/>
-                  <!-- Foot contact bodies for motion data compatibility (matches adam_sp structure) -->
-                  <body name="toeTipRight" pos="0.17 0 0">
-                    <inertial pos="0 0 0" mass="0.01" diaginertia="1e-6 1e-6 1e-6"/>
-                  </body>
-                  <body name="heelPadRight" pos="-0.06 0 0"/>
-                  <body name="midfootPadRight" pos="0.05 0 0"/>
                 </body>
               </body>
             </body>
