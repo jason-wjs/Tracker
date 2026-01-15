@@ -36,23 +36,24 @@ uv run tracker-list-envs
 ### 2. Evaluate Policies (Play)
 Run a trained checkpoint against a specific motion:
 ```bash
-uv run tracker-play <task_id> \
-  --checkpoint-file /path/to/checkpoint.pt  \
-  --motion-file /path/to/motion.npz \
-  --gpu-ids 0 --num-envs 8
+./play.sh
 ```
 
 ### 3. Train Policies
 Launch RL training for motion tracking:
 ```bash
-uv run tracker-train <task_id> \
-    --motion-file /path/to/motion.npz \
-    --gpu-ids 0 \
-    --agent.logger wandb \
-    --agent.wandb-project <project-name> \
-    --agent.max-iterations 10000 \
-    --env.scene.num-envs 4096
+./train.sh
 ```
+
+Key arguments:
+- `<task_id>`: environment ID from `tracker-list-envs`.
+- `--motion-file` (or `--motion_file`): local `.npz` motion file (offline training).
+- `--gpu-ids`: CUDA device indices (e.g. `0`).
+- `--agent.logger`: logger backend (e.g. `wandb`).
+- `--agent.wandb-project`: W&B project name for logging.
+- `--agent.max-iterations`: total training iterations.
+- `--env.scene.num-envs`: number of parallel environments.
+
 
 ---
 *Looking ahead: Phase 2 will introduce multi-clip sampling, multi-GPU training support, and enhanced asset validation tools.*
