@@ -14,6 +14,8 @@ Notes (2026-01-09):
     `right_foot*_collision`) to reduce worst-case contact counts in vectorized runs.
   - Remove toe-pad sphere collision geoms to further reduce contact points (the pad
     bodies remain for motion compatibility, but are non-colliding).
+  - Toe contact marker sub-bodies (toeTip/heelPad/midfootPad) are now commented out to
+    match reference toe structure (adam_pro_stl.xml style: no toe sub-bodies).
   - Foot capsule radius / layout is derived from the toe mesh AABB (toeLeft.STL /
     toeRight.STL) to avoid hand-tuned heuristics.
   - Replace pelvis/torso collision meshes with simple box primitives to avoid MJWarp
@@ -136,19 +138,22 @@ Notes (2026-01-09):
                   <geom class="visual" mesh="toeLeft" material="silver" />
                   <geom class="foot_capsule" name="left_foot1_collision" fromto="-0.063633 -0.039224 -0.054562 0.158693 -0.039224 -0.054562" />
                   <geom class="foot_capsule" name="left_foot2_collision" fromto="-0.063633 -0.019437 -0.054562 0.158693 -0.019437 -0.054562" />
-                  <geom class="foot_capsule" name="left_foot3_collision" fromto="-0.063633 0.000351 -0.054562 0.158693 0.000351 -0.054562" />
-                  <geom class="foot_capsule" name="left_foot4_collision" fromto="-0.063633 0.020138 -0.054562 0.158693 0.020138 -0.054562" />
-                  <geom class="foot_capsule" name="left_foot5_collision" fromto="-0.063633 0.039925 -0.054562 0.158693 0.039925 -0.054562" />
-                  <body name="toeTipLeft" pos="0.17 0 0">
-                    <inertial pos="0 0 0" mass="0.01" diaginertia="1e-6 1e-6 1e-6" />
-                  </body>
-                  <body name="heelPadLeft" pos="-0.06 0 0"/>
-                  <body name="midfootPadLeft" pos="0.05 0 0"/>
-                </body>
-              </body>
-            </body>
-          </body>
-        </body>
+	                  <geom class="foot_capsule" name="left_foot3_collision" fromto="-0.063633 0.000351 -0.054562 0.158693 0.000351 -0.054562" />
+	                  <geom class="foot_capsule" name="left_foot4_collision" fromto="-0.063633 0.020138 -0.054562 0.158693 0.020138 -0.054562" />
+	                  <geom class="foot_capsule" name="left_foot5_collision" fromto="-0.063633 0.039925 -0.054562 0.158693 0.039925 -0.054562" />
+	                  <!-- Foot contact marker bodies are not needed for collision; kept here for reference (commented out to match reference toe structure). -->
+	                  <!--
+	                  <body name="toeTipLeft" pos="0.17 0 0">
+	                    <inertial pos="0 0 0" mass="0.01" diaginertia="1e-6 1e-6 1e-6" />
+	                  </body>
+	                  <body name="heelPadLeft" pos="-0.06 0 0"/>
+	                  <body name="midfootPadLeft" pos="0.05 0 0"/>
+	                  -->
+	                </body>
+	              </body>
+	            </body>
+	          </body>
+	        </body>
       </body>
       <body name="hipPitchRight" pos="0 -0.0961925 -0.0332412" quat="0.953717 0.300706 0 0">
         <inertial pos="-0.0566179 -0.0575934 -0.00078211" quat="-0.0285368 0.566536 -0.434359 0.699682" mass="2.23477" diaginertia="0.00517891 0.00513008 0.00286639" />
@@ -181,19 +186,22 @@ Notes (2026-01-09):
                 <geom class="visual" mesh="toeRight" material="silver" />
                 <geom class="foot_capsule" name="right_foot1_collision" fromto="-0.063633 -0.039925 -0.054562 0.158614 -0.039925 -0.054562" />
                 <geom class="foot_capsule" name="right_foot2_collision" fromto="-0.063633 -0.020138 -0.054562 0.158614 -0.020138 -0.054562" />
-                <geom class="foot_capsule" name="right_foot3_collision" fromto="-0.063633 -0.000351 -0.054562 0.158614 -0.000351 -0.054562" />
-                <geom class="foot_capsule" name="right_foot4_collision" fromto="-0.063633 0.019437 -0.054562 0.158614 0.019437 -0.054562" />
-                <geom class="foot_capsule" name="right_foot5_collision" fromto="-0.063633 0.039224 -0.054562 0.158614 0.039224 -0.054562" />
-                <body name="toeTipRight" pos="0.17 0 0">
-                  <inertial pos="0 0 0" mass="0.01" diaginertia="1e-6 1e-6 1e-6" />
-                </body>
-                <body name="heelPadRight" pos="-0.06 0 0"/>
-                <body name="midfootPadRight" pos="0.05 0 0"/>
-              </body>
-              </body>
-            </body>
-          </body>
-        </body>
+	                <geom class="foot_capsule" name="right_foot3_collision" fromto="-0.063633 -0.000351 -0.054562 0.158614 -0.000351 -0.054562" />
+	                <geom class="foot_capsule" name="right_foot4_collision" fromto="-0.063633 0.019437 -0.054562 0.158614 0.019437 -0.054562" />
+	                <geom class="foot_capsule" name="right_foot5_collision" fromto="-0.063633 0.039224 -0.054562 0.158614 0.039224 -0.054562" />
+	                <!-- Foot contact marker bodies are not needed for collision; kept here for reference (commented out to match reference toe structure). -->
+	                <!--
+	                <body name="toeTipRight" pos="0.17 0 0">
+	                  <inertial pos="0 0 0" mass="0.01" diaginertia="1e-6 1e-6 1e-6" />
+	                </body>
+	                <body name="heelPadRight" pos="-0.06 0 0"/>
+	                <body name="midfootPadRight" pos="0.05 0 0"/>
+	                -->
+	              </body>
+	              </body>
+	            </body>
+	          </body>
+	        </body>
       </body>
       <body name="waistRoll_link" pos="0 0 0.044">
         <inertial pos="0.00093826 0.00093832 0.0399999" quat="0.383833 0.0123801 -0.00511148 0.923305" mass="2.36268" diaginertia="0.00543471 0.00542871 0.00184736" />
