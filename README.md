@@ -56,35 +56,25 @@ uv run tracker-view-robot --robot-id adam_sp --variant 23 --viewer native
 ### 3. Evaluate Policies (Play)
 Run a trained checkpoint against a specific motion:
 ```bash
-uv run tracker-play <task_id> \
-  --checkpoint-file /path/to/checkpoint.pt  \
-  --motion-file /path/to/motion.npz \
-  --gpu-ids 0 \
-  --num-envs 8
-# or:
-uv run tracker-play <task_id> \
-  --registry-name <entity/project/motions:alias> \
-  --gpu-ids 0 \
-  --num-envs 8
+./play.sh
 ```
 
 ### 4. Train Policies
 Launch large-scale RL training for motion tracking:
 ```bash
-uv run tracker-train <task_id> \
-    --motion-file /path/to/motion.npz \
-    --gpu-ids 0 \
-    --agent.logger wandb \
-    --agent.wandb-project <your-project> \
-    --agent.max-iterations 10000 \
-    --env.scene.num-envs 4096
-# or:
-uv run tracker-train <task_id> \ 
-    --registry-name <entity/project/motions:alias> \
-    --gpu-ids 0 \
-    --agent.max-iterations 10000 \
-    --env.scene.num-envs 4096
+./train.sh
 ```
+
+Key arguments:
+- `<task_id>`: environment ID from `tracker-list-envs`.
+- `--motion-file` (or `--motion_file`): local `.npz` motion file (offline training).
+- `--registry-name`: W&B motion artifact alias (use instead of `--motion-file`).
+- `--gpu-ids`: CUDA device indices (e.g. `0`).
+- `--agent.logger`: logger backend (e.g. `wandb`).
+- `--agent.wandb-project`: W&B project name for logging.
+- `--agent.max-iterations`: total training iterations.
+- `--env.scene.num-envs`: number of parallel environments.
+
 
 ## Development
 Run the test suite or build the distribution package:
