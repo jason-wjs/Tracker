@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import logging
 import os
 from dataclasses import asdict
 from datetime import datetime
@@ -18,6 +19,14 @@ from mjlab.utils.os import dump_yaml, get_checkpoint_path, get_wandb_checkpoint_
 from mjlab.utils.torch import configure_torch_backends
 from mjlab.utils.wandb import add_wandb_tags
 from mjlab.utils.wrappers import VideoRecorder
+
+
+def shard_num_envs(*, total: int, world_size: int) -> int:
+  if world_size <= 0:
+    raise ValueError("world_size must be >= 1")
+  if total % world_size != 0:
+    raise ValueError(f"num_envs ({total}) must be divisible by world_size ({world_size})")
+  return total // world_size
 
 
 def ensure_offline_safe_logging(
@@ -114,7 +123,6 @@ def run_train_offline(
   motion_pack_dir: str | None = None,
   motion_split: str = "train",
   log_dir: Path,
-  gpu_ids: list[int] | str | None = None,
   wandb_run_path: str | None = None,
   torchrunx_log_dir: str | None = None,
   enable_nan_guard: bool = False,
@@ -124,6 +132,21 @@ def run_train_offline(
 ) -> None:
   del torchrunx_log_dir
 
+  cuda_visible = os.environ.get("CUDA_VISIBLE_DEVICES", "")
+  if cuda_visible == "":
+    device = "cpu"
+    seed = agent_cfg.seed
+    rank = 0
+    world_size = 1
+  else:
+    local_rank = int(os.environ.get("LOCAL_RANK", "0"))
+    rank = int(os.environ.get("RANK", "0"))
+    world_size = int(os.environ.get("WORLD_SIZE", "1"))
+    os.environ["MUJOCO_EGL_DEVICE_ID"] = str(local_rank)
+    os.environ["MUJOCO_GL"] = "egl"
+    device = f"cuda:{local_rank}"
+    seed = agent_cfg.seed + local_rank
+
   configure_torch_backends()
 
   if motion_pack_dir is not None:
@@ -132,30 +155,21 @@ def run_train_offline(
     apply_offline_motion_file(env_cfg, motion_file)
   else:
     raise ValueError("Offline training requires either motion_file or motion_pack_dir.")
-  ensure_offline_safe_logging(agent_cfg)
+
+  agent_cfg.seed = seed
+  env_cfg.seed = seed
 
   if enable_nan_guard:
     env_cfg.sim.nan_guard.enabled = True
-    print(f"[INFO] NaN guard enabled, output dir: {env_cfg.sim.nan_guard.output_dir}")
+    if rank == 0:
+      print(f"[INFO] NaN guard enabled, output dir: {env_cfg.sim.nan_guard.output_dir}")
 
-  # Select GPUs based on CUDA_VISIBLE_DEVICES and user specification.
-  selected_gpus, num_gpus = select_gpus(gpu_ids)
-  if num_gpus > 1:
-    raise NotImplementedError("Phase 1 supports CPU/single-GPU offline training only.")
+  if world_size > 1:
+    env_cfg.scene.num_envs = shard_num_envs(total=env_cfg.scene.num_envs, world_size=world_size)
 
-  if selected_gpus is None:
-    os.environ["CUDA_VISIBLE_DEVICES"] = ""
-    device = "cpu"
-  else:
-    os.environ["CUDA_VISIBLE_DEVICES"] = str(selected_gpus[0])
-    os.environ["MUJOCO_EGL_DEVICE_ID"] = "0"
-    os.environ["MUJOCO_GL"] = "egl"
-    device = "cuda:0"
-
-  env_cfg.seed = agent_cfg.seed
-
-  print(f"[INFO] Offline training with: device={device}, seed={agent_cfg.seed}")
-  print(f"[INFO] Logging experiment in directory: {log_dir}")
+  if rank == 0:
+    print(f"[INFO] Offline training with: device={device}, seed={seed}, world_size={world_size}")
+    print(f"[INFO] Logging experiment in directory: {log_dir}")
 
   env = ManagerBasedRlEnv(cfg=env_cfg, device=device, render_mode="rgb_array" if video else None)
 
@@ -165,18 +179,19 @@ def run_train_offline(
     log_root_path = log_dir.parent
     if wandb_run_path is not None:
       resume_path, was_cached = get_wandb_checkpoint_path(log_root_path, Path(wandb_run_path))
-      run_id = resume_path.parent.name
-      checkpoint_name = resume_path.name
-      cached_str = "cached" if was_cached else "downloaded"
-      print(
-        f"[INFO]: Loading checkpoint from W&B: {checkpoint_name} "
-        f"(run: {run_id}, {cached_str})"
-      )
+      if rank == 0:
+        run_id = resume_path.parent.name
+        checkpoint_name = resume_path.name
+        cached_str = "cached" if was_cached else "downloaded"
+        print(
+          f"[INFO]: Loading checkpoint from W&B: {checkpoint_name} "
+          f"(run: {run_id}, {cached_str})"
+        )
     else:
       resume_path = get_checkpoint_path(log_root_path, agent_cfg.load_run, agent_cfg.load_checkpoint)
 
-  # Video recording.
-  if video:
+  # Video recording (rank 0 only).
+  if video and rank == 0:
     env = VideoRecorder(
       env,
       video_folder=Path(log_dir) / "videos" / "train",
@@ -196,13 +211,16 @@ def run_train_offline(
   runner = runner_cls(env, asdict(agent_cfg), str(log_dir), device, **runner_kwargs)
 
   add_wandb_tags(agent_cfg.wandb_tags)
-  runner.add_git_repo_to_log(__file__)
+  if rank == 0:
+    runner.add_git_repo_to_log(__file__)
   if resume_path is not None:
-    print(f"[INFO]: Loading model checkpoint from: {resume_path}")
+    if rank == 0:
+      print(f"[INFO]: Loading model checkpoint from: {resume_path}")
     runner.load(str(resume_path))
 
-  dump_yaml(log_dir / "params" / "env.yaml", asdict(env_cfg))
-  dump_yaml(log_dir / "params" / "agent.yaml", asdict(agent_cfg))
+  if rank == 0:
+    dump_yaml(log_dir / "params" / "env.yaml", asdict(env_cfg))
+    dump_yaml(log_dir / "params" / "agent.yaml", asdict(agent_cfg))
 
   runner.learn(num_learning_iterations=agent_cfg.max_iterations, init_at_random_ep_len=True)
   env.close()
@@ -225,7 +243,54 @@ def launch_training_offline(
   video_interval: int = 2000,
 ) -> None:
   log_dir = _make_log_dir(agent_cfg)
-  run_train_offline(
+
+  # Select GPUs based on CUDA_VISIBLE_DEVICES and user specification.
+  selected_gpus, num_gpus = select_gpus(gpu_ids)
+
+  if selected_gpus is None:
+    os.environ["CUDA_VISIBLE_DEVICES"] = ""
+  else:
+    os.environ["CUDA_VISIBLE_DEVICES"] = ",".join(map(str, selected_gpus))
+    os.environ["MUJOCO_GL"] = "egl"
+
+  ensure_offline_safe_logging(agent_cfg)
+
+  if num_gpus <= 1:
+    run_train_offline(
+      task_id,
+      env_cfg,
+      agent_cfg,
+      motion_file=motion_file,
+      motion_pack_dir=motion_pack_dir,
+      motion_split=motion_split,
+      log_dir=log_dir,
+      wandb_run_path=wandb_run_path,
+      torchrunx_log_dir=torchrunx_log_dir,
+      enable_nan_guard=enable_nan_guard,
+      video=video,
+      video_length=video_length,
+      video_interval=video_interval,
+    )
+    return
+
+  import torchrunx
+
+  logging.basicConfig(level=logging.INFO)
+
+  if "TORCHRUNX_LOG_DIR" not in os.environ:
+    if torchrunx_log_dir is not None:
+      os.environ["TORCHRUNX_LOG_DIR"] = torchrunx_log_dir
+    else:
+      os.environ["TORCHRUNX_LOG_DIR"] = str(log_dir / "torchrunx")
+
+  print(f"[INFO] Launching offline training with {num_gpus} GPUs", flush=True)
+  torchrunx.Launcher(
+    hostnames=["localhost"],
+    workers_per_host=num_gpus,
+    backend=None,
+    copy_env_vars=torchrunx.DEFAULT_ENV_VARS_FOR_COPY + ("MUJOCO*",),
+  ).run(
+    run_train_offline,
     task_id,
     env_cfg,
     agent_cfg,
@@ -233,7 +298,6 @@ def launch_training_offline(
     motion_pack_dir=motion_pack_dir,
     motion_split=motion_split,
     log_dir=log_dir,
-    gpu_ids=gpu_ids,
     wandb_run_path=wandb_run_path,
     torchrunx_log_dir=torchrunx_log_dir,
     enable_nan_guard=enable_nan_guard,
