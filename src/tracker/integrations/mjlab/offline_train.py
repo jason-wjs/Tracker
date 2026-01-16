@@ -85,6 +85,17 @@ def apply_offline_motion_file(env_cfg: ManagerBasedRlEnvCfg, motion_file: str) -
   motion_cmd.motion_file = motion_file
 
 
+def apply_offline_motion_pack(
+  env_cfg: ManagerBasedRlEnvCfg,
+  *,
+  pack_dir: str,
+  split: str,
+) -> None:
+  from tracker.tasks.tracking.config.patch import apply_motion_pack
+
+  apply_motion_pack(env_cfg, pack_dir=Path(pack_dir), split=split)
+
+
 def _make_log_dir(agent_cfg: RslRlOnPolicyRunnerCfg) -> Path:
   log_root_path = Path("logs") / "rsl_rl" / agent_cfg.experiment_name
   log_root_path.resolve()
@@ -99,7 +110,9 @@ def run_train_offline(
   env_cfg: ManagerBasedRlEnvCfg,
   agent_cfg: RslRlOnPolicyRunnerCfg,
   *,
-  motion_file: str,
+  motion_file: str | None = None,
+  motion_pack_dir: str | None = None,
+  motion_split: str = "train",
   log_dir: Path,
   gpu_ids: list[int] | str | None = None,
   wandb_run_path: str | None = None,
@@ -113,7 +126,12 @@ def run_train_offline(
 
   configure_torch_backends()
 
-  apply_offline_motion_file(env_cfg, motion_file)
+  if motion_pack_dir is not None:
+    apply_offline_motion_pack(env_cfg, pack_dir=motion_pack_dir, split=motion_split)
+  elif motion_file is not None:
+    apply_offline_motion_file(env_cfg, motion_file)
+  else:
+    raise ValueError("Offline training requires either motion_file or motion_pack_dir.")
   ensure_offline_safe_logging(agent_cfg)
 
   if enable_nan_guard:
@@ -195,7 +213,9 @@ def launch_training_offline(
   env_cfg: ManagerBasedRlEnvCfg,
   agent_cfg: RslRlOnPolicyRunnerCfg,
   *,
-  motion_file: str,
+  motion_file: str | None = None,
+  motion_pack_dir: str | None = None,
+  motion_split: str = "train",
   gpu_ids: list[int] | str | None = None,
   wandb_run_path: str | None = None,
   torchrunx_log_dir: str | None = None,
@@ -210,6 +230,8 @@ def launch_training_offline(
     env_cfg,
     agent_cfg,
     motion_file=motion_file,
+    motion_pack_dir=motion_pack_dir,
+    motion_split=motion_split,
     log_dir=log_dir,
     gpu_ids=gpu_ids,
     wandb_run_path=wandb_run_path,

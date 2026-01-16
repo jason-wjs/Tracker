@@ -6,6 +6,8 @@ but it should not register tasks at import time.
 
 from __future__ import annotations
 
+from dataclasses import fields
+from pathlib import Path
 from typing import Callable, Mapping, Sequence
 
 from mjlab.envs import ManagerBasedRlEnvCfg
@@ -184,3 +186,26 @@ def make_flat_tracking_env_cfg_for_robot(
     motion_cmd.sampling_mode = "start"
 
   return cfg
+
+
+def apply_motion_pack(
+  cfg: ManagerBasedRlEnvCfg,
+  *,
+  pack_dir: Path,
+  split: str,
+) -> None:
+  """Patch a tracking env config to use a packed multi-clip motion dataset."""
+  assert cfg.commands is not None
+  motion_cmd = cfg.commands.get("motion")
+  if not isinstance(motion_cmd, MotionCommandCfg):
+    raise ValueError("Task does not appear to be a motion-tracking task.")
+
+  from tracker.tasks.tracking.multiclip_command import MultiClipMotionCommand, MotionPackCommandCfg
+
+  kwargs = {f.name: getattr(motion_cmd, f.name) for f in fields(MotionCommandCfg)}
+  kwargs["motion_file"] = str(pack_dir)
+  kwargs["class_type"] = MultiClipMotionCommand
+  # MVP: MultiClipMotionCommand implements hierarchical uniform sampling.
+  kwargs["sampling_mode"] = "uniform"
+
+  cfg.commands["motion"] = MotionPackCommandCfg(**kwargs, motion_split=split)

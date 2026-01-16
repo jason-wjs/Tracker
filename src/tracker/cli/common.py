@@ -38,14 +38,28 @@ def get_flag_value(argv: list[str], flags: Iterable[str]) -> str | None:
 
 def ensure_motion_source_exclusive(argv: list[str]) -> None:
   motion_file = get_flag_value(argv, ("--motion-file",))
+  motion_pack = get_flag_value(argv, ("--motion-pack",))
+  motion_split = get_flag_value(argv, ("--motion-split",))
   registry_name = get_flag_value(argv, ("--registry-name",))
-  if motion_file is not None and registry_name is not None:
-    raise ValueError("Use only one of --motion-file or --registry-name")
+  sources = [v is not None for v in (motion_file, motion_pack, registry_name)]
+  if sum(sources) > 1:
+    raise ValueError("Use only one of --motion-file, --motion-pack, or --registry-name")
+  if motion_split is not None and motion_pack is None:
+    raise ValueError("--motion-split requires --motion-pack")
 
 
 def get_motion_file(argv: list[str]) -> Path | None:
   value = get_flag_value(argv, ("--motion-file",))
   return Path(value) if value is not None else None
+
+
+def get_motion_pack(argv: list[str]) -> Path | None:
+  value = get_flag_value(argv, ("--motion-pack",))
+  return Path(value) if value is not None else None
+
+
+def get_motion_split(argv: list[str]) -> str | None:
+  return get_flag_value(argv, ("--motion-split",))
 
 
 def get_registry_name(argv: list[str]) -> str | None:

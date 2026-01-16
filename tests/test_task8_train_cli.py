@@ -37,3 +37,40 @@ def test_tracker_train_offline_mode_preflight(tmp_path):
   )
   assert mode == "offline"
   assert remaining == []
+
+
+def test_tracker_train_motion_pack_preflight(tmp_path):
+  from tracker.integrations.mjlab.bootstrap import bootstrap
+
+  bootstrap()
+
+  from tracker.cli.train import resolve_train_mode
+  from tracker.motions.manifest import Manifest, TaskSpec
+  from tracker.motions.pack_writer import write_motion_pack
+  from tracker.motions.splits import SplitConfig
+
+  root = tmp_path / "root"
+  (root / "all").mkdir(parents=True)
+  np.savez(
+    root / "all" / "0.npz",
+    joint_pos=np.zeros((1, 1), dtype=np.float32),
+    joint_vel=np.zeros((1, 1), dtype=np.float32),
+    body_pos_w=np.zeros((1, 1, 3), dtype=np.float32),
+    body_quat_w=np.zeros((1, 1, 4), dtype=np.float32),
+    body_lin_vel_w=np.zeros((1, 1, 3), dtype=np.float32),
+    body_ang_vel_w=np.zeros((1, 1, 3), dtype=np.float32),
+  )
+
+  pack_dir = tmp_path / "pack"
+  write_motion_pack(
+    Manifest(schema_version=1, root=root, tasks=[TaskSpec(name="all", include=["all/*.npz"])]),
+    SplitConfig(seed=0, val_ratio=0.0, test_ratio=0.0),
+    pack_dir,
+  )
+
+  mode, remaining = resolve_train_mode(
+    "Tracker-Tracking-Flat-Adam-SP-23",
+    ["--motion-pack", str(pack_dir), "--motion-split", "train"],
+  )
+  assert mode == "offline"
+  assert remaining == []
