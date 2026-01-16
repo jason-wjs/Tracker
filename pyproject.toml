@@ -17,6 +17,7 @@ tracker-train = "tracker.cli.train:main"
 tracker-play = "tracker.cli.play:main"
 tracker-list-envs = "tracker.cli.list_envs:main"
 tracker-view-robot = "tracker.cli.view_robot:main"
+tracker-pack-motions = "tracker.cli.pack_motions:main"
 
 [project.entry-points."mjlab.tasks"]
 tracker = "tracker.tasks.register_all"
