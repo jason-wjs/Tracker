@@ -1,8 +1,10 @@
 # tracker
 
+NOTE: This branch is experimental. See `docs/CHANGELOG.md`.
+
 **High-fidelity, whole-body motion tracking for the Adam robot family.**
 
-`tracker` is a modular task package built on top of [mjlab](https://github.com/mujocolab/mjlab.git), specializing in universal motion tracking policies. By leveraging [BeyondMimic](https://beyondmimic.github.io/) as its core algorithmic engine, it provides a streamlined workflow for training agile humanoid behaviors from motion capture data.
+`tracker` is a task package built on top of [`mjlab`](https://github.com/mujocolab/mjlab.git), designed for high-fidelity motion tracking with offline motion datasets.
 
 ## Core Features
 
@@ -10,17 +12,7 @@ Developed with a focus on speed, modularity, and high-fidelity simulation, `trac
 - **Environment Registration**: Seamless integration with the `mjlab` ecosystem.
 - **Robot Assets**: Self-contained MJCF and mesh data for the Adam robot family, resolved dynamically.
 - **Workflow Utilities**: Specialized CLIs for model inspection, policy evaluation, and training.
-- **Flexible Data Sources**: Native support for offline `.npz` files and W&B artifact resolution.
-
-## Phase 1.5 Refinements
-
-This version introduces significant enhancements to the initial Adam-SP baseline:
-- **Adam-Pro Support**: Added the Adam-Pro robot family in both 23-DOF and 29-DOF configurations.
-- **Robot Adapter Registry**: Implemented a robust adapter system for task-specific motion validation and dataset preparation.
-- **Visual Inspection**: New `tracker-view-robot` tool for rapid validation of assets, actuators, and collision geometries.
-- **Architecture Refactor**: Clean separation of configuration builders from environment registration.
-- **Package Hygiene**: Optimized package data handling, including support for mesh extraction from wheels/zips.
-- **Stability Patches**: Introduced sensor-name aliasing and collision pruning to ensure stable training for "hard-motion" clips at scale.
+- **Flexible Data Sources**: Native support for offline single-clip `.npz` files and packed multi-clip motion datasets.
 
 ## Getting Started
 
@@ -53,22 +45,51 @@ uv run tracker-view-robot --robot-id adam_pro --variant 29 --viewer none
 uv run tracker-view-robot --robot-id adam_sp --variant 23 --viewer native
 ```
 
-### 3. Evaluate Policies (Play)
-Run a trained checkpoint against a specific motion:
+### 3. Pack a multi-clip dataset (optional)
+Create a packed dataset directory from a YAML manifest of clips:
 ```bash
-./play.sh
+uv run tracker-pack-motions \
+  --manifest /path/to/manifest.yaml \
+  --out /path/to/pack_dir
 ```
 
-### 4. Train Policies
-Launch large-scale RL training for motion tracking:
+### 4. Train
+Single-clip offline training:
 ```bash
-./train.sh
+uv run tracker-train Tracker-Tracking-Flat-Adam-Pro-29 \
+  --motion-file /path/to/motion.npz \
+  --gpu-ids 0 \
+  --agent.max-iterations 5000 \
+  --env.scene.num-envs 4096
+```
+
+Packed multi-clip offline training:
+```bash
+uv run tracker-train Tracker-Tracking-Flat-Adam-Pro-29 \
+  --motion-pack /path/to/pack_dir \
+  --motion-split train \
+  --gpu-ids 0 \
+  --agent.max-iterations 5000 \
+  --env.scene.num-envs 4096
+```
+
+### 5. Evaluate (val/test split)
+```bash
+uv run tracker-eval Tracker-Tracking-Flat-Adam-Pro-29 \
+  --checkpoint /path/to/model.pt \
+  --motion-pack /path/to/pack_dir \
+  --motion-split val \
+  --num-episodes 100 \
+  --num-envs 128 \
+  --device cuda:0
 ```
 
 Key arguments:
 - `<task_id>`: environment ID from `tracker-list-envs`.
 - `--motion-file` (or `--motion_file`): local `.npz` motion file (offline training).
 - `--registry-name`: W&B motion artifact alias (use instead of `--motion-file`).
+- `--motion-pack`: path to a packed multi-clip dataset directory (offline training).
+- `--motion-split`: `train|val|test` split name when using `--motion-pack`.
 - `--gpu-ids`: CUDA device indices (e.g. `0`).
 - `--agent.logger`: logger backend (e.g. `wandb`).
 - `--agent.wandb-project`: W&B project name for logging.

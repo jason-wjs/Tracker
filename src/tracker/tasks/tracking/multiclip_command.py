@@ -7,6 +7,7 @@ from typing import TYPE_CHECKING
 import torch
 
 from mjlab.managers import CommandTerm
+from mjlab.tasks.tracking.mdp.commands import MotionCommand as MjlabMotionCommand
 from mjlab.tasks.tracking.mdp.commands import MotionCommandCfg
 from mjlab.utils.lab_api.math import (
   quat_apply,
@@ -33,14 +34,28 @@ class MotionPackCommandCfg(MotionCommandCfg):
   motion_split: str = "train"
 
 
-class MultiClipMotionCommand(CommandTerm):
+@dataclass(frozen=True)
+class _ExportMotion:
+  joint_pos: torch.Tensor
+  joint_vel: torch.Tensor
+  body_pos_w: torch.Tensor
+  body_quat_w: torch.Tensor
+  body_lin_vel_w: torch.Tensor
+  body_ang_vel_w: torch.Tensor
+  time_step_total: int
+
+
+class MultiClipMotionCommand(MjlabMotionCommand):
   """Multi-clip motion command backed by a packed motion directory."""
 
   cfg: MotionCommandCfg
   _env: ManagerBasedRlEnv
 
   def __init__(self, cfg: MotionCommandCfg, env: ManagerBasedRlEnv):
-    super().__init__(cfg, env)
+    # IMPORTANT: We intentionally do NOT call `MjlabMotionCommand.__init__` because it
+    # loads a single-clip MotionLoader from `motion_file`. We instead initialize the
+    # `CommandTerm` base directly and provide a compatible `.motion` view.
+    CommandTerm.__init__(self, cfg, env)
 
     self.robot: Entity = env.scene[cfg.entity_name]
     self.robot_anchor_body_index = self.robot.body_names.index(self.cfg.anchor_body_name)
@@ -64,6 +79,11 @@ class MultiClipMotionCommand(CommandTerm):
       clip_task_id=self.pack.clip_task_id.to(dtype=torch.int64),
       split_clip_ids=split_clip_ids,
     )
+
+    # mjlab's tracking ONNX exporter expects `env.command_manager.get_term("motion")`
+    # to be a `MotionCommand` instance and to expose `.motion.<arrays>`.
+    # For multi-clip training, export a representative single clip (clip_id=0).
+    self._set_export_motion(pack=self.pack, body_indexes=self.body_indexes, clip_id=0)
 
     self.clip_id = torch.zeros(self.num_envs, dtype=torch.int64, device=self.device)
     self.task_id = torch.zeros(self.num_envs, dtype=torch.int64, device=self.device)
@@ -90,6 +110,33 @@ class MultiClipMotionCommand(CommandTerm):
     self.metrics["sampling_entropy"] = torch.zeros(self.num_envs, device=self.device)
     self.metrics["sampling_top1_prob"] = torch.zeros(self.num_envs, device=self.device)
     self.metrics["sampling_top1_bin"] = torch.zeros(self.num_envs, device=self.device)
+
+  def _set_export_motion(self, *, pack: MotionPack, body_indexes: torch.Tensor, clip_id: int) -> None:
+    """Attach a single-clip `.motion` view for mjlab's ONNX exporter."""
+    if clip_id < 0 or clip_id >= int(pack.clip_start.numel()):
+      raise ValueError(f"clip_id out of range: {clip_id}")
+
+    start = int(pack.clip_start[clip_id].item())
+    length = int(pack.clip_len[clip_id].item())
+    end = start + length
+
+    joint_pos = pack.joint_pos[start:end]
+    joint_vel = pack.joint_vel[start:end]
+
+    body_pos_w = pack.body_pos_w[start:end].index_select(1, body_indexes).float()
+    body_quat_w = pack.body_quat_w[start:end].index_select(1, body_indexes).float()
+    body_lin_vel_w = pack.body_lin_vel_w[start:end].index_select(1, body_indexes).float()
+    body_ang_vel_w = pack.body_ang_vel_w[start:end].index_select(1, body_indexes).float()
+
+    self.motion = _ExportMotion(  # type: ignore[attr-defined]
+      joint_pos=joint_pos.to(dtype=torch.float32),
+      joint_vel=joint_vel.to(dtype=torch.float32),
+      body_pos_w=body_pos_w,
+      body_quat_w=body_quat_w,
+      body_lin_vel_w=body_lin_vel_w,
+      body_ang_vel_w=body_ang_vel_w,
+      time_step_total=length,
+    )
 
   @property
   def command(self) -> torch.Tensor:
@@ -337,4 +384,3 @@ class MultiClipMotionCommand(CommandTerm):
     self.body_pos_relative_w = delta_pos_w + quat_apply(
       delta_ori_w, self.body_pos_w - anchor_pos_w_repeat
     )
-

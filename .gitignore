@@ -3,6 +3,7 @@
 .uv-cache/
 .tracker-cache/
 .wandb/
+wandb/
 artifacts/
 logs/
 __pycache__/
