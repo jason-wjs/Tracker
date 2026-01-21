@@ -7,6 +7,9 @@ Last updated: 2026-01-14
   Key changes from original:
   - Reduced to 23 DOF by locking wrists (3 DOF each), fingers (24 DOF total), and neck (2 DOF)
   - Locked joints are commented out but structure preserved for future use
+  - Neck bodies are commented out to match adam_sp motion body topology (54 bodies total).
+    To avoid dropping neck/head mass/inertia, the torso inertial is updated to merge
+    torso + neckYaw_link + neckPitch_link inertials from this file (rigidly attached assumption).
   - Added <default> class system for visual/collision geoms
   - Added material definitions (silver, black, white)
   - Uses freejoint name: floating_base (matches adam_sp for compatibility)
@@ -29,6 +32,7 @@ Last updated: 2026-01-14
   - Collision defaults are set to world-only (contype=0, conaffinity=1) to disable self-collision.
   - Trunk collision uses simple box primitives (pelvis/torso) to reduce mesh contact explosion.
   - Feet collisions use G1-style multi-capsule geoms (left_foot*/right_foot*) to reduce worst-case contact counts.
+  - Neck bodies commented out for motion compatibility; torso inertial merges neck/head.
 -->
   <compiler angle="radian" meshdir="meshes" autolimits="true"/>
 
@@ -273,14 +277,14 @@ Last updated: 2026-01-14
           <geom class="visual" material="silver" mesh="waistPitch_link"/>
           <geom class="collision" name="waistPitch_collision" mesh="waistPitch_link"/>
 
-          <body name="torso" pos="0 0.0005 0.053">
-            <inertial pos="-0.00183601 0.00056583 0.166624"
-                      quat="0.999452 -0.00189053 -0.0328345 0.00382224"
-                      mass="12.7334"
-                      diaginertia="0.13029 0.0859386 0.0736823"/>
-            <joint name="waistYaw" pos="0 0 0" axis="0 0 1" range="-0.829 0.829"/>
-            <geom class="visual" material="silver" mesh="torso"/>
-            <geom class="collision" name="torso_collision" type="box" size="0.105 0.171 0.284" pos="0.0207 0 0.2816"/>
+	          <body name="torso" pos="0 0.0005 0.053">
+	            <inertial pos="0.001066897049 0.000403123119 0.195227075017"
+	                      quat="0.690571781211 -0.001616199693 0.723242207612 0.005358359967"
+	                      mass="14.088772"
+	                      diaginertia="0.078474215342 0.202824189084 0.245019868376"/>
+	            <joint name="waistYaw" pos="0 0 0" axis="0 0 1" range="-0.829 0.829"/>
+	            <geom class="visual" material="silver" mesh="torso"/>
+	            <geom class="collision" name="torso_collision" type="box" size="0.105 0.171 0.284" pos="0.0207 0 0.2816"/>
 
             <body name="shoulderPitchLeft" pos="0 0.165094 0.25923" quat="0.984808 0.173648 0 0">
               <inertial pos="0.00542694 0.0268987 0.00010792"
@@ -662,29 +666,34 @@ Last updated: 2026-01-14
               </body>
             </body>
 
-            <!-- Neck bodies commented out for adam_sp motion data compatibility (60 bodies).
-                 Uncomment if you need neck bodies in the model.
-            <body name="neckYaw_link" pos="-0.013 0 0.29855">
-              <inertial pos="0.0228442 -0.00120876 0.0992634"
-                        quat="0.719761 0.0861591 0.0813325 0.684036"
-                        mass="0.399168"
-                        diaginertia="0.00132274 0.00131438 0.000128684"/>
-              <geom class="visual" material="silver" mesh="neckYaw_link"/>
-              <geom class="collision" name="neckYaw_link_collision" mesh="neckYaw_link"/>
+	            <!-- Neck bodies commented out for motion data compatibility (54 bodies total).
+	                 Torso inertial is updated to include neck/head mass and inertia (rigid merge).
+	                 Reference joints (when enabling neck):
+	                   <joint name="neckYaw" pos="0 0 0" axis="0 0 1" range="-1.571 1.571"/>
+	                   <joint name="neckPitch" pos="0 0 0" axis="0 1 0" range="-0.873 0.873"/>
+	            -->
+	            <!--
+	            <body name="neckYaw_link" pos="-0.013 0 0.29855">
+	              <inertial pos="0.0228442 -0.00120876 0.0992634"
+	                        quat="0.719761 0.0861591 0.0813325 0.684036"
+	                        mass="0.399168"
+	                        diaginertia="0.00132274 0.00131438 0.000128684"/>
+	              <geom class="visual" material="silver" mesh="neckYaw_link"/>
+	              <geom class="collision" name="neckYaw_link_collision" mesh="neckYaw_link"/>
 
-              <body name="neckPitch_link" pos="0.0316 0.01995 0.14595">
-                <inertial pos="0.0174597 -0.0210407 0.0470534"
-                          quat="0.0369738 0.852876 0.0341259 0.519683"
-                          mass="0.956204"
-                          diaginertia="0.00368991 0.00348806 0.00231156"/>
-                <geom class="visual" material="silver" mesh="neckPitch_link"/>
-                <geom class="collision" name="neckPitch_link_collision" mesh="neckPitch_link"/>
-              </body>
-            </body>
-            -->
-          </body>
-        </body>
-      </body>
+	              <body name="neckPitch_link" pos="0.0316 0.01995 0.14595">
+	                <inertial pos="0.0174597 -0.0210407 0.0470534"
+	                          quat="0.0369738 0.852876 0.0341259 0.519683"
+	                          mass="0.956204"
+	                          diaginertia="0.00368991 0.00348806 0.00231156"/>
+	                <geom class="visual" material="silver" mesh="neckPitch_link"/>
+	                <geom class="collision" name="neckPitch_link_collision" mesh="neckPitch_link"/>
+	              </body>
+	            </body>
+	            -->
+	          </body>
+	        </body>
+	      </body>
 
       <site name="imu" pos="0 0 0"/>
     </body>

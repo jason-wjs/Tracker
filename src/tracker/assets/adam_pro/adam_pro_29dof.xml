@@ -7,6 +7,9 @@ Last updated: 2026-01-14
   Key changes from original:
   - Reduced to 29 DOF by locking fingers (24 DOF total) and neck (2 DOF); wrists (3 DOF each) enabled
   - Locked joints are commented out but structure preserved for future use
+  - Neck bodies are commented out to match adam_sp motion body topology (54 bodies total).
+    To avoid dropping neck/head mass/inertia, the torso inertial is updated to merge
+    torso + neckYaw_link + neckPitch_link inertials from `adam_pro.xml` (rigidly attached assumption).
   - Added <default> class system for visual/collision geoms
   - Added material definitions (silver, black, white)
   - Uses freejoint name: floating_base (matches adam_sp for compatibility)
@@ -30,7 +33,7 @@ Last updated: 2026-01-14
   - Trunk collision uses simple box primitives (pelvis/torso) to reduce mesh contact explosion.
   - Feet collisions use G1-style multi-capsule geoms (left_foot*/right_foot*) to reduce worst-case contact counts.
   - Toe contact marker sub-bodies (toeTip/heelPad/midfootPad) removed to match reference toe structure (adam_pro_stl.xml).
-  - Neck bodies commented out for adam_sp motion data compatibility (60 bodies total).
+  - Neck bodies commented out for adam_sp motion data compatibility (54 bodies total); torso inertial merges neck/head.
 -->
   <compiler angle="radian" meshdir="meshes" autolimits="true"/>
 
@@ -275,14 +278,14 @@ Last updated: 2026-01-14
           <geom class="visual" material="silver" mesh="waistPitch_link"/>
           <geom class="collision" name="waistPitch_collision" mesh="waistPitch_link"/>
 
-          <body name="torso" pos="0 0.0005 0.053">
-            <inertial pos="-0.00183601 0.00056583 0.166624"
-                      quat="0.999452 -0.00189053 -0.0328345 0.00382224"
-                      mass="12.7334"
-                      diaginertia="0.13029 0.0859386 0.0736823"/>
-            <joint name="waistYaw" pos="0 0 0" axis="0 0 1" range="-0.829 0.829"/>
-            <geom class="visual" material="silver" mesh="torso"/>
-            <geom class="collision" name="torso_collision" type="box" size="0.105 0.171 0.284" pos="0.0207 0 0.2816"/>
+	          <body name="torso" pos="0 0.0005 0.053">
+	            <inertial pos="0.001066897049 0.000403123119 0.195227075017"
+	                      quat="0.690571781211 -0.001616199693 0.723242207612 0.005358359967"
+	                      mass="14.088772"
+	                      diaginertia="0.078474215342 0.202824189084 0.245019868376"/>
+	            <joint name="waistYaw" pos="0 0 0" axis="0 0 1" range="-0.829 0.829"/>
+	            <geom class="visual" material="silver" mesh="torso"/>
+	            <geom class="collision" name="torso_collision" type="box" size="0.105 0.171 0.284" pos="0.0207 0 0.2816"/>
 
             <body name="shoulderPitchLeft" pos="0 0.165094 0.25923" quat="0.984808 0.173648 0 0">
               <inertial pos="0.00542694 0.0268987 0.00010792"
