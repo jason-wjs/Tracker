@@ -48,9 +48,21 @@ def _register_tracking_tasks() -> None:
       adam_pro_23_tracking_ppo_runner_cfg(),
     ),
     (
+      "Tracker-Tracking-Flat-Adam-Pro-23-No-State-Estimation",
+      lambda: adam_pro_flat_tracking_env_cfg(has_state_estimation=False),
+      lambda: adam_pro_flat_tracking_env_cfg(has_state_estimation=False, play=True),
+      adam_pro_23_tracking_ppo_runner_cfg(),
+    ),
+    (
       "Tracker-Tracking-Flat-Adam-Pro-29",
       adam_pro_29_flat_tracking_env_cfg,
       lambda: adam_pro_29_flat_tracking_env_cfg(play=True),
+      adam_pro_29_tracking_ppo_runner_cfg(),
+    ),
+    (
+      "Tracker-Tracking-Flat-Adam-Pro-29-No-State-Estimation",
+      lambda: adam_pro_29_flat_tracking_env_cfg(has_state_estimation=False),
+      lambda: adam_pro_29_flat_tracking_env_cfg(has_state_estimation=False, play=True),
       adam_pro_29_tracking_ppo_runner_cfg(),
     ),
   ]

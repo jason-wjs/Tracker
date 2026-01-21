@@ -8,6 +8,8 @@ TASK_ID_ADAM_SP_23 = "Tracker-Tracking-Flat-Adam-SP-23"
 TASK_ID_ADAM_SP_29 = "Tracker-Tracking-Flat-Adam-SP-29"
 TASK_ID_ADAM_PRO_23 = "Tracker-Tracking-Flat-Adam-Pro-23"
 TASK_ID_ADAM_PRO_29 = "Tracker-Tracking-Flat-Adam-Pro-29"
+TASK_ID_ADAM_PRO_23_NO_STATE_ESTIMATION = "Tracker-Tracking-Flat-Adam-Pro-23-No-State-Estimation"
+TASK_ID_ADAM_PRO_29_NO_STATE_ESTIMATION = "Tracker-Tracking-Flat-Adam-Pro-29-No-State-Estimation"
 
 
 ValidateMotionFn = Callable[[Path], None]
@@ -78,6 +80,8 @@ _ADAPTER_BUILDERS: dict[str, Callable[[], RobotAdapter]] = {
   TASK_ID_ADAM_SP_29: _build_adam_sp_29,
   TASK_ID_ADAM_PRO_23: _build_adam_pro_23,
   TASK_ID_ADAM_PRO_29: _build_adam_pro_29,
+  TASK_ID_ADAM_PRO_23_NO_STATE_ESTIMATION: _build_adam_pro_23,
+  TASK_ID_ADAM_PRO_29_NO_STATE_ESTIMATION: _build_adam_pro_29,
 }
 
 

@@ -26,3 +26,5 @@ def test_robot_registry_includes_adam_pro_task_ids():
   task_ids = set(list_known_task_ids())
   assert "Tracker-Tracking-Flat-Adam-Pro-23" in task_ids
   assert "Tracker-Tracking-Flat-Adam-Pro-29" in task_ids
+  assert "Tracker-Tracking-Flat-Adam-Pro-23-No-State-Estimation" in task_ids
+  assert "Tracker-Tracking-Flat-Adam-Pro-29-No-State-Estimation" in task_ids

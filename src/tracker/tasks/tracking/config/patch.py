@@ -162,7 +162,17 @@ def make_flat_tracking_env_cfg_for_robot(
   cfg.terminations["ee_body_pos"].params["body_names"] = _DEFAULT_EE_BODY_NAMES
   cfg.viewer.body_name = tracking_anchor_body
 
+  # Always apply observation parameter aliases when provided.
+  #
+  # This keeps tracker robots compatible with mjlab's default observation terms
+  # (e.g., `robot/imu_ang_vel`) while allowing robots to expose differently
+  # named sensors.
+  if observation_param_aliases:
+    _apply_observation_param_aliases(cfg, observation_param_aliases)
+
   if not has_state_estimation:
+    # Match mjlab "no-state-estimation" definition exactly: drop anchor position
+    # and IMU linear velocity terms from policy observations.
     new_policy_terms = {
       k: v
       for k, v in cfg.observations["policy"].terms.items()
@@ -173,8 +183,6 @@ def make_flat_tracking_env_cfg_for_robot(
       concatenate_terms=True,
       enable_corruption=True,
     )
-  elif observation_param_aliases:
-    _apply_observation_param_aliases(cfg, observation_param_aliases)
 
   if play:
     cfg.episode_length_s = int(1e9)
