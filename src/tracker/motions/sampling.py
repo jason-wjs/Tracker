@@ -10,7 +10,7 @@ class HierarchicalSampler:
   """Hierarchical sampling: task → clip → time.
 
   - Tasks are sampled uniformly across tasks present in the chosen split.
-  - Clips are sampled uniformly within the selected task.
+  - Clips are sampled proportional to clip length within the selected task (frame-uniform).
   - Time is sampled uniformly within the selected clip length.
   """
 
@@ -63,8 +63,15 @@ class HierarchicalSampler:
       ]
       if candidates.numel() == 0:
         raise RuntimeError(f"Task {task_id} has no clips in split (unexpected).")
-      pick = torch.randint(
-        0, candidates.numel(), (env_sel.numel(),), device=device, generator=generator
+      candidate_lens = clip_len[candidates].to(dtype=torch.float32)
+      if torch.any(candidate_lens <= 0):
+        raise ValueError(f"Found non-positive clip_len for task_id={task_id}")
+
+      pick = torch.multinomial(
+        candidate_lens,
+        num_samples=env_sel.numel(),
+        replacement=True,
+        generator=generator,
       )
       sampled_clip_ids[env_sel] = candidates[pick]
 
@@ -74,4 +81,3 @@ class HierarchicalSampler:
       * sampled_lens.to(dtype=torch.float32)
     ).to(dtype=torch.int64)
     return sampled_clip_ids, sampled_task_ids, t
-
