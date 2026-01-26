@@ -20,6 +20,7 @@ from mjlab.utils.lab_api.math import (
 )
 
 from tracker.motions.pack_loader import MotionPack
+from tracker.motions.adaptive_time_sampler import AdaptiveTimeBinSampler
 from tracker.motions.sampling import HierarchicalSampler
 
 if TYPE_CHECKING:
@@ -78,6 +79,14 @@ class MultiClipMotionCommand(MjlabMotionCommand):
     self.sampler = HierarchicalSampler(
       clip_task_id=self.pack.clip_task_id.to(dtype=torch.int64),
       split_clip_ids=split_clip_ids,
+    )
+    self.adaptive_sampler = AdaptiveTimeBinSampler(
+      clip_len=self.pack.clip_len.to(dtype=torch.int64),
+      step_dt=env.step_dt,
+      adaptive_kernel_size=self.cfg.adaptive_kernel_size,
+      adaptive_lambda=self.cfg.adaptive_lambda,
+      adaptive_uniform_ratio=self.cfg.adaptive_uniform_ratio,
+      adaptive_alpha=self.cfg.adaptive_alpha,
     )
 
     # mjlab's tracking ONNX exporter expects `env.command_manager.get_term("motion")`
@@ -282,18 +291,33 @@ class MultiClipMotionCommand(MjlabMotionCommand):
     self.clip_id[env_ids] = clip_ids
     self.task_id[env_ids] = task_ids
 
+    if self.cfg.sampling_mode == "adaptive":
+      t, entropy, top1_prob, top1_bin = self.adaptive_sampler.sample_time(
+        clip_ids=clip_ids, return_metrics=True
+      )
+      self.metrics["sampling_entropy"][env_ids] = entropy
+      self.metrics["sampling_top1_prob"][env_ids] = top1_prob
+      self.metrics["sampling_top1_bin"][env_ids] = top1_bin
+    else:
+      self.metrics["sampling_entropy"][env_ids] = 1.0
+      self.metrics["sampling_top1_prob"][env_ids] = 0.0
+      self.metrics["sampling_top1_bin"][env_ids] = 0.5
+
     if self.cfg.sampling_mode == "start":
       t.zero_()
     self.time_steps[env_ids] = t
-
-    self.metrics["sampling_entropy"][:] = 1.0
-    self.metrics["sampling_top1_prob"][:] = 0.0
-    self.metrics["sampling_top1_bin"][:] = 0.5
 
   def _resample_command(self, env_ids: torch.Tensor) -> None:
     if self.cfg.sampling_mode not in ("start", "uniform", "adaptive"):
       raise ValueError(f"Unknown sampling_mode: {self.cfg.sampling_mode!r}")
 
+    if self.cfg.sampling_mode == "adaptive":
+      terminated = self._env.termination_manager.terminated[env_ids]
+      self.adaptive_sampler.update_failures(
+        clip_ids=self.clip_id[env_ids],
+        time_steps=self.time_steps[env_ids],
+        terminated=terminated,
+      )
     self._sample_motion(env_ids)
 
     root_pos = self.body_pos_w[:, 0].clone()
@@ -384,3 +408,6 @@ class MultiClipMotionCommand(MjlabMotionCommand):
     self.body_pos_relative_w = delta_pos_w + quat_apply(
       delta_ori_w, self.body_pos_w - anchor_pos_w_repeat
     )
+
+    if self.cfg.sampling_mode == "adaptive":
+      self.adaptive_sampler.update_ema()

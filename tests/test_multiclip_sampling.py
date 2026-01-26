@@ -40,3 +40,51 @@ def test_hierarchical_sampler_task_uniform_and_clip_length_weighted():
   sampled_lens = clip_len[clip_ids]
   assert torch.all(t >= 0)
   assert torch.all(t < sampled_lens)
+
+
+def test_multiclip_command_adaptive_sampling_sets_metrics():
+  from types import SimpleNamespace
+
+  from tracker.motions.sampling import HierarchicalSampler
+  from tracker.tasks.tracking.multiclip_command import MultiClipMotionCommand
+
+  torch.manual_seed(0)
+
+  # Build a minimal MultiClipMotionCommand instance without full env.
+  cmd = MultiClipMotionCommand.__new__(MultiClipMotionCommand)
+  cmd.cfg = SimpleNamespace(sampling_mode="adaptive")
+
+  clip_task_id = torch.tensor([0, 0], dtype=torch.int64)
+  split_clip_ids = torch.tensor([0, 1], dtype=torch.int64)
+  cmd.sampler = HierarchicalSampler(clip_task_id=clip_task_id, split_clip_ids=split_clip_ids)
+  cmd.pack = SimpleNamespace(clip_len=torch.tensor([10, 20], dtype=torch.int64))
+
+  num_envs = 4
+  cmd.clip_id = torch.zeros(num_envs, dtype=torch.int64)
+  cmd.task_id = torch.zeros(num_envs, dtype=torch.int64)
+  cmd.time_steps = torch.zeros(num_envs, dtype=torch.int64)
+  cmd.metrics = {
+    "sampling_entropy": torch.zeros(num_envs, dtype=torch.float32),
+    "sampling_top1_prob": torch.zeros(num_envs, dtype=torch.float32),
+    "sampling_top1_bin": torch.zeros(num_envs, dtype=torch.float32),
+  }
+
+  class DummyAdaptive:
+    def sample_time(self, *, clip_ids, generator=None, return_metrics=False):
+      assert return_metrics is True
+      n = clip_ids.numel()
+      t = torch.full((n,), 7, dtype=torch.int64)
+      entropy = torch.full((n,), 0.3)
+      top1_prob = torch.full((n,), 0.8)
+      top1_bin = torch.full((n,), 0.6)
+      return t, entropy, top1_prob, top1_bin
+
+  cmd.adaptive_sampler = DummyAdaptive()
+
+  env_ids = torch.arange(num_envs, dtype=torch.int64)
+  cmd._sample_motion(env_ids)
+
+  assert torch.all(cmd.time_steps == 7)
+  assert torch.allclose(cmd.metrics["sampling_entropy"], torch.full((num_envs,), 0.3))
+  assert torch.allclose(cmd.metrics["sampling_top1_prob"], torch.full((num_envs,), 0.8))
+  assert torch.allclose(cmd.metrics["sampling_top1_bin"], torch.full((num_envs,), 0.6))
