@@ -201,6 +201,7 @@ def apply_motion_pack(
   *,
   pack_dir: Path,
   split: str,
+  sampling_mode: str | None = None,
 ) -> None:
   """Patch a tracking env config to use a packed multi-clip motion dataset."""
   assert cfg.commands is not None
@@ -213,7 +214,12 @@ def apply_motion_pack(
   kwargs = {f.name: getattr(motion_cmd, f.name) for f in fields(MotionCommandCfg)}
   kwargs["motion_file"] = str(pack_dir)
   kwargs["class_type"] = MultiClipMotionCommand
-  # MVP: MultiClipMotionCommand implements hierarchical uniform sampling.
-  kwargs["sampling_mode"] = "uniform"
+  if sampling_mode is not None:
+    if sampling_mode not in ("adaptive", "uniform", "start"):
+      raise ValueError(
+        f"Unknown sampling_mode override: {sampling_mode!r} "
+        "(expected 'adaptive', 'uniform', or 'start')"
+      )
+    kwargs["sampling_mode"] = sampling_mode
 
   cfg.commands["motion"] = MotionPackCommandCfg(**kwargs, motion_split=split)

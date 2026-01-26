@@ -99,10 +99,16 @@ def apply_offline_motion_pack(
   *,
   pack_dir: str,
   split: str,
+  sampling_mode: str | None = None,
 ) -> None:
   from tracker.tasks.tracking.config.patch import apply_motion_pack
 
-  apply_motion_pack(env_cfg, pack_dir=Path(pack_dir), split=split)
+  apply_motion_pack(
+    env_cfg,
+    pack_dir=Path(pack_dir),
+    split=split,
+    sampling_mode=sampling_mode,
+  )
 
 
 def _make_log_dir(agent_cfg: RslRlOnPolicyRunnerCfg) -> Path:
@@ -122,6 +128,7 @@ def run_train_offline(
   motion_file: str | None = None,
   motion_pack_dir: str | None = None,
   motion_split: str = "train",
+  motion_pack_sampling_mode: str | None = None,
   log_dir: Path,
   wandb_run_path: str | None = None,
   torchrunx_log_dir: str | None = None,
@@ -150,7 +157,12 @@ def run_train_offline(
   configure_torch_backends()
 
   if motion_pack_dir is not None:
-    apply_offline_motion_pack(env_cfg, pack_dir=motion_pack_dir, split=motion_split)
+    apply_offline_motion_pack(
+      env_cfg,
+      pack_dir=motion_pack_dir,
+      split=motion_split,
+      sampling_mode=motion_pack_sampling_mode,
+    )
   elif motion_file is not None:
     apply_offline_motion_file(env_cfg, motion_file)
   else:
@@ -234,6 +246,7 @@ def launch_training_offline(
   motion_file: str | None = None,
   motion_pack_dir: str | None = None,
   motion_split: str = "train",
+  motion_pack_sampling_mode: str | None = None,
   gpu_ids: list[int] | str | None = None,
   wandb_run_path: str | None = None,
   torchrunx_log_dir: str | None = None,
@@ -263,6 +276,7 @@ def launch_training_offline(
       motion_file=motion_file,
       motion_pack_dir=motion_pack_dir,
       motion_split=motion_split,
+      motion_pack_sampling_mode=motion_pack_sampling_mode,
       log_dir=log_dir,
       wandb_run_path=wandb_run_path,
       torchrunx_log_dir=torchrunx_log_dir,
@@ -297,6 +311,7 @@ def launch_training_offline(
     motion_file=motion_file,
     motion_pack_dir=motion_pack_dir,
     motion_split=motion_split,
+    motion_pack_sampling_mode=motion_pack_sampling_mode,
     log_dir=log_dir,
     wandb_run_path=wandb_run_path,
     torchrunx_log_dir=torchrunx_log_dir,

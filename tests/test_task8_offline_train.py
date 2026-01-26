@@ -64,3 +64,20 @@ def test_offline_train_disables_wandb_by_default(monkeypatch):
   agent = RslRlOnPolicyRunnerCfg(logger="wandb")
   ensure_offline_safe_logging(agent, env=os.environ)
   assert agent.logger == "tensorboard"
+
+
+def test_apply_motion_pack_preserves_sampling_mode():
+  from pathlib import Path
+
+  from tracker.tasks.tracking.config.env import adam_sp_flat_tracking_env_cfg
+  from tracker.tasks.tracking.config.patch import apply_motion_pack
+
+  cfg = adam_sp_flat_tracking_env_cfg()
+  assert cfg.commands is not None
+  assert cfg.commands["motion"].sampling_mode == "adaptive"
+
+  apply_motion_pack(cfg, pack_dir=Path("dummy_pack"), split="train")
+  assert cfg.commands["motion"].sampling_mode == "adaptive"
+
+  apply_motion_pack(cfg, pack_dir=Path("dummy_pack"), split="train", sampling_mode="uniform")
+  assert cfg.commands["motion"].sampling_mode == "uniform"

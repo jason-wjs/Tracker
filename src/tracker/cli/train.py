@@ -9,6 +9,7 @@ from tracker.cli.common import (
   ensure_motion_source_exclusive,
   get_motion_file,
   get_motion_pack,
+  get_motion_pack_sampling_mode,
   get_motion_split,
   prepare_motion_for_task,
   validate_motion_for_task,
@@ -49,7 +50,14 @@ def resolve_train_mode(task_id: str, argv: list[str]) -> tuple[str, list[str]]:
       raise ValueError(f"--motion-pack path does not exist: {motion_pack}")
     remaining = _strip_flag(
       argv,
-      flags=("--motion-pack", "--motion_pack", "--motion-split", "--motion_split"),
+      flags=(
+        "--motion-pack",
+        "--motion_pack",
+        "--motion-split",
+        "--motion_split",
+        "--motion-pack-sampling-mode",
+        "--motion_pack_sampling_mode",
+      ),
     )
     return "offline", remaining
 
@@ -82,6 +90,7 @@ def run(task_id: str, argv: list[str]) -> None:
   motion_file = get_motion_file(argv)
   motion_pack = get_motion_pack(argv)
   motion_split = get_motion_split(argv) or "train"
+  motion_pack_sampling_mode = get_motion_pack_sampling_mode(argv)
   if motion_file is None and motion_pack is None:
     raise ValueError("Offline mode requires either --motion-file or --motion-pack")
 
@@ -94,6 +103,7 @@ def run(task_id: str, argv: list[str]) -> None:
       agent_cfg=args.agent,
       motion_pack_dir=str(motion_pack),
       motion_split=motion_split,
+      motion_pack_sampling_mode=motion_pack_sampling_mode,
       gpu_ids=args.gpu_ids,
       wandb_run_path=args.wandb_run_path,
       torchrunx_log_dir=args.torchrunx_log_dir,
