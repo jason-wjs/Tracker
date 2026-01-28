@@ -38,3 +38,17 @@ This file records milestone features present in this branch snapshot (not semant
 
 ### References
 - `docs/plans/2026-01-16-phase-2-multiclip-multigpu-implementation-plan.md`
+
+
+## 2026-01-26 — Phase 2 polish (adaptive sampling for motion packs)
+
+### Added
+- Per-clip adaptive time-bin sampling for packed datasets (motion-pack) to better support large multi-clip training.
+- `--motion-pack-sampling-mode` CLI override for training with packed datasets (`adaptive|uniform|start`).
+- Compatibility shim for mjlab ONNX export expectations when using the tracker-owned multi-clip command term (keeps `mjlab/` untouched).
+
+### Notes
+- This branch does **not** implement a clip-wise global curriculum/difficulty scheduler yet. Global curriculum will be implemented and benchmarked in a follow-up branch.
+
+### References
+- `docs/plans/2026-01-26-phase-2-multiclip-adaptive-sampling-polish-implementation-plan.md`
