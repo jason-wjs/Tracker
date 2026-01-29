@@ -42,6 +42,24 @@ def test_hierarchical_sampler_task_uniform_and_clip_length_weighted():
   assert torch.all(t < sampled_lens)
 
 
+def test_hierarchical_sampler_respects_clip_multiplier_within_task():
+  from tracker.motions.sampling import HierarchicalSampler
+
+  torch.manual_seed(0)
+
+  clip_task_id = torch.tensor([0, 0, 0, 0], dtype=torch.int64)
+  split_clip_ids = torch.arange(4, dtype=torch.int64)
+  clip_len = torch.tensor([100, 100, 100, 100], dtype=torch.int64)
+  # Make clip 2 "hard" via multiplier.
+  clip_multiplier = torch.tensor([1.0, 1.0, 10.0, 1.0], dtype=torch.float32)
+
+  sampler = HierarchicalSampler(clip_task_id=clip_task_id, split_clip_ids=split_clip_ids)
+  clip_ids, _, _ = sampler.sample(n=20_000, clip_len=clip_len, clip_multiplier=clip_multiplier)
+
+  counts = torch.bincount(clip_ids, minlength=4).float()
+  assert counts[2] > counts.mean() * 2.0
+
+
 def test_multiclip_command_adaptive_sampling_sets_metrics():
   from types import SimpleNamespace
 

@@ -38,12 +38,22 @@ class HierarchicalSampler:
     *,
     n: int,
     clip_len: torch.Tensor,
+    clip_multiplier: torch.Tensor | None = None,
     generator: torch.Generator | None = None,
   ) -> tuple[torch.Tensor, torch.Tensor, torch.Tensor]:
     if n < 0:
       raise ValueError("n must be >= 0")
     if clip_len.ndim != 1 or clip_len.dtype != torch.int64:
       raise ValueError("clip_len must be int64 1D (num_clips,)")
+    if clip_multiplier is not None:
+      if clip_multiplier.ndim != 1:
+        raise ValueError("clip_multiplier must be 1D (num_clips,)")
+      if clip_multiplier.shape != clip_len.shape:
+        raise ValueError("clip_multiplier must have shape (num_clips,)")
+      if not clip_multiplier.is_floating_point():
+        raise ValueError("clip_multiplier must be a floating tensor")
+      if torch.any(clip_multiplier < 0):
+        raise ValueError("clip_multiplier must be >= 0")
 
     device = self.split_clip_ids.device
     task_ids = self._task_ids().to(device=device)
@@ -67,8 +77,14 @@ class HierarchicalSampler:
       if torch.any(candidate_lens <= 0):
         raise ValueError(f"Found non-positive clip_len for task_id={task_id}")
 
+      weights = candidate_lens
+      if clip_multiplier is not None:
+        weights = candidate_lens * clip_multiplier[candidates].to(dtype=torch.float32)
+        if weights.sum() <= 0:
+          raise ValueError(f"All sampling weights are zero for task_id={task_id}")
+
       pick = torch.multinomial(
-        candidate_lens,
+        weights,
         num_samples=env_sel.numel(),
         replacement=True,
         generator=generator,
