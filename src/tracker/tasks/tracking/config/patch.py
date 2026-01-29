@@ -202,6 +202,11 @@ def apply_motion_pack(
   pack_dir: Path,
   split: str,
   sampling_mode: str | None = None,
+  clip_curriculum_mode: str | None = None,
+  clip_curriculum_mix: float | None = None,
+  clip_curriculum_strength: float | None = None,
+  clip_curriculum_tau_scale: float | None = None,
+  clip_curriculum_max_mult: float | None = None,
 ) -> None:
   """Patch a tracking env config to use a packed multi-clip motion dataset."""
   assert cfg.commands is not None
@@ -221,5 +226,29 @@ def apply_motion_pack(
         "(expected 'adaptive', 'uniform', or 'start')"
       )
     kwargs["sampling_mode"] = sampling_mode
+
+  if clip_curriculum_mode is not None:
+    if clip_curriculum_mode not in ("ema_bin_failed", "off"):
+      raise ValueError(
+        f"Unknown clip_curriculum_mode override: {clip_curriculum_mode!r} "
+        "(expected 'ema_bin_failed' or 'off')"
+      )
+    kwargs["clip_curriculum_mode"] = clip_curriculum_mode
+  if clip_curriculum_mix is not None:
+    if not (0.0 <= clip_curriculum_mix <= 1.0):
+      raise ValueError("clip_curriculum_mix must be in [0, 1]")
+    kwargs["clip_curriculum_mix"] = float(clip_curriculum_mix)
+  if clip_curriculum_strength is not None:
+    if clip_curriculum_strength < 0:
+      raise ValueError("clip_curriculum_strength must be >= 0")
+    kwargs["clip_curriculum_strength"] = float(clip_curriculum_strength)
+  if clip_curriculum_tau_scale is not None:
+    if clip_curriculum_tau_scale <= 0:
+      raise ValueError("clip_curriculum_tau_scale must be > 0")
+    kwargs["clip_curriculum_tau_scale"] = float(clip_curriculum_tau_scale)
+  if clip_curriculum_max_mult is not None:
+    if clip_curriculum_max_mult < 1.0:
+      raise ValueError("clip_curriculum_max_mult must be >= 1")
+    kwargs["clip_curriculum_max_mult"] = float(clip_curriculum_max_mult)
 
   cfg.commands["motion"] = MotionPackCommandCfg(**kwargs, motion_split=split)

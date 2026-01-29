@@ -100,6 +100,11 @@ def apply_offline_motion_pack(
   pack_dir: str,
   split: str,
   sampling_mode: str | None = None,
+  clip_curriculum_mode: str | None = None,
+  clip_curriculum_mix: float | None = None,
+  clip_curriculum_strength: float | None = None,
+  clip_curriculum_tau_scale: float | None = None,
+  clip_curriculum_max_mult: float | None = None,
 ) -> None:
   from tracker.tasks.tracking.config.patch import apply_motion_pack
 
@@ -108,6 +113,11 @@ def apply_offline_motion_pack(
     pack_dir=Path(pack_dir),
     split=split,
     sampling_mode=sampling_mode,
+    clip_curriculum_mode=clip_curriculum_mode,
+    clip_curriculum_mix=clip_curriculum_mix,
+    clip_curriculum_strength=clip_curriculum_strength,
+    clip_curriculum_tau_scale=clip_curriculum_tau_scale,
+    clip_curriculum_max_mult=clip_curriculum_max_mult,
   )
 
 
@@ -129,6 +139,11 @@ def run_train_offline(
   motion_pack_dir: str | None = None,
   motion_split: str = "train",
   motion_pack_sampling_mode: str | None = None,
+  motion_pack_clip_curriculum_mode: str | None = None,
+  motion_pack_clip_curriculum_mix: float | None = None,
+  motion_pack_clip_curriculum_strength: float | None = None,
+  motion_pack_clip_curriculum_tau_scale: float | None = None,
+  motion_pack_clip_curriculum_max_mult: float | None = None,
   log_dir: Path,
   wandb_run_path: str | None = None,
   torchrunx_log_dir: str | None = None,
@@ -162,6 +177,11 @@ def run_train_offline(
       pack_dir=motion_pack_dir,
       split=motion_split,
       sampling_mode=motion_pack_sampling_mode,
+      clip_curriculum_mode=motion_pack_clip_curriculum_mode,
+      clip_curriculum_mix=motion_pack_clip_curriculum_mix,
+      clip_curriculum_strength=motion_pack_clip_curriculum_strength,
+      clip_curriculum_tau_scale=motion_pack_clip_curriculum_tau_scale,
+      clip_curriculum_max_mult=motion_pack_clip_curriculum_max_mult,
     )
   elif motion_file is not None:
     apply_offline_motion_file(env_cfg, motion_file)
@@ -247,6 +267,11 @@ def launch_training_offline(
   motion_pack_dir: str | None = None,
   motion_split: str = "train",
   motion_pack_sampling_mode: str | None = None,
+  motion_pack_clip_curriculum_mode: str | None = None,
+  motion_pack_clip_curriculum_mix: float | None = None,
+  motion_pack_clip_curriculum_strength: float | None = None,
+  motion_pack_clip_curriculum_tau_scale: float | None = None,
+  motion_pack_clip_curriculum_max_mult: float | None = None,
   gpu_ids: list[int] | str | None = None,
   wandb_run_path: str | None = None,
   torchrunx_log_dir: str | None = None,
@@ -277,6 +302,11 @@ def launch_training_offline(
       motion_pack_dir=motion_pack_dir,
       motion_split=motion_split,
       motion_pack_sampling_mode=motion_pack_sampling_mode,
+      motion_pack_clip_curriculum_mode=motion_pack_clip_curriculum_mode,
+      motion_pack_clip_curriculum_mix=motion_pack_clip_curriculum_mix,
+      motion_pack_clip_curriculum_strength=motion_pack_clip_curriculum_strength,
+      motion_pack_clip_curriculum_tau_scale=motion_pack_clip_curriculum_tau_scale,
+      motion_pack_clip_curriculum_max_mult=motion_pack_clip_curriculum_max_mult,
       log_dir=log_dir,
       wandb_run_path=wandb_run_path,
       torchrunx_log_dir=torchrunx_log_dir,
@@ -312,6 +342,11 @@ def launch_training_offline(
     motion_pack_dir=motion_pack_dir,
     motion_split=motion_split,
     motion_pack_sampling_mode=motion_pack_sampling_mode,
+    motion_pack_clip_curriculum_mode=motion_pack_clip_curriculum_mode,
+    motion_pack_clip_curriculum_mix=motion_pack_clip_curriculum_mix,
+    motion_pack_clip_curriculum_strength=motion_pack_clip_curriculum_strength,
+    motion_pack_clip_curriculum_tau_scale=motion_pack_clip_curriculum_tau_scale,
+    motion_pack_clip_curriculum_max_mult=motion_pack_clip_curriculum_max_mult,
     log_dir=log_dir,
     wandb_run_path=wandb_run_path,
     torchrunx_log_dir=torchrunx_log_dir,

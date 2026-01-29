@@ -9,6 +9,11 @@ from tracker.cli.common import (
   ensure_motion_source_exclusive,
   get_motion_file,
   get_motion_pack,
+  get_motion_pack_clip_curriculum_max_mult,
+  get_motion_pack_clip_curriculum_mix,
+  get_motion_pack_clip_curriculum_mode,
+  get_motion_pack_clip_curriculum_strength,
+  get_motion_pack_clip_curriculum_tau_scale,
   get_motion_pack_sampling_mode,
   get_motion_split,
   prepare_motion_for_task,
@@ -57,6 +62,16 @@ def resolve_train_mode(task_id: str, argv: list[str]) -> tuple[str, list[str]]:
         "--motion_split",
         "--motion-pack-sampling-mode",
         "--motion_pack_sampling_mode",
+        "--motion-pack-clip-curriculum-mode",
+        "--motion_pack_clip_curriculum_mode",
+        "--motion-pack-clip-curriculum-mix",
+        "--motion_pack_clip_curriculum_mix",
+        "--motion-pack-clip-curriculum-strength",
+        "--motion_pack_clip_curriculum_strength",
+        "--motion-pack-clip-curriculum-tau-scale",
+        "--motion_pack_clip_curriculum_tau_scale",
+        "--motion-pack-clip-curriculum-max-mult",
+        "--motion_pack_clip_curriculum_max_mult",
       ),
     )
     return "offline", remaining
@@ -91,6 +106,11 @@ def run(task_id: str, argv: list[str]) -> None:
   motion_pack = get_motion_pack(argv)
   motion_split = get_motion_split(argv) or "train"
   motion_pack_sampling_mode = get_motion_pack_sampling_mode(argv)
+  motion_pack_clip_curriculum_mode = get_motion_pack_clip_curriculum_mode(argv)
+  motion_pack_clip_curriculum_mix = get_motion_pack_clip_curriculum_mix(argv)
+  motion_pack_clip_curriculum_strength = get_motion_pack_clip_curriculum_strength(argv)
+  motion_pack_clip_curriculum_tau_scale = get_motion_pack_clip_curriculum_tau_scale(argv)
+  motion_pack_clip_curriculum_max_mult = get_motion_pack_clip_curriculum_max_mult(argv)
   if motion_file is None and motion_pack is None:
     raise ValueError("Offline mode requires either --motion-file or --motion-pack")
 
@@ -104,6 +124,11 @@ def run(task_id: str, argv: list[str]) -> None:
       motion_pack_dir=str(motion_pack),
       motion_split=motion_split,
       motion_pack_sampling_mode=motion_pack_sampling_mode,
+      motion_pack_clip_curriculum_mode=motion_pack_clip_curriculum_mode,
+      motion_pack_clip_curriculum_mix=motion_pack_clip_curriculum_mix,
+      motion_pack_clip_curriculum_strength=motion_pack_clip_curriculum_strength,
+      motion_pack_clip_curriculum_tau_scale=motion_pack_clip_curriculum_tau_scale,
+      motion_pack_clip_curriculum_max_mult=motion_pack_clip_curriculum_max_mult,
       gpu_ids=args.gpu_ids,
       wandb_run_path=args.wandb_run_path,
       torchrunx_log_dir=args.torchrunx_log_dir,

@@ -41,6 +41,19 @@ def ensure_motion_source_exclusive(argv: list[str]) -> None:
   motion_pack = get_flag_value(argv, ("--motion-pack",))
   motion_split = get_flag_value(argv, ("--motion-split",))
   motion_pack_sampling_mode = get_flag_value(argv, ("--motion-pack-sampling-mode",))
+  motion_pack_clip_curriculum_mode = get_flag_value(
+    argv, ("--motion-pack-clip-curriculum-mode",)
+  )
+  motion_pack_clip_curriculum_mix = get_flag_value(argv, ("--motion-pack-clip-curriculum-mix",))
+  motion_pack_clip_curriculum_strength = get_flag_value(
+    argv, ("--motion-pack-clip-curriculum-strength",)
+  )
+  motion_pack_clip_curriculum_tau_scale = get_flag_value(
+    argv, ("--motion-pack-clip-curriculum-tau-scale",)
+  )
+  motion_pack_clip_curriculum_max_mult = get_flag_value(
+    argv, ("--motion-pack-clip-curriculum-max-mult",)
+  )
   registry_name = get_flag_value(argv, ("--registry-name",))
   sources = [v is not None for v in (motion_file, motion_pack, registry_name)]
   if sum(sources) > 1:
@@ -49,6 +62,16 @@ def ensure_motion_source_exclusive(argv: list[str]) -> None:
     raise ValueError("--motion-split requires --motion-pack")
   if motion_pack_sampling_mode is not None and motion_pack is None:
     raise ValueError("--motion-pack-sampling-mode requires --motion-pack")
+  if motion_pack_clip_curriculum_mode is not None and motion_pack is None:
+    raise ValueError("--motion-pack-clip-curriculum-mode requires --motion-pack")
+  if motion_pack_clip_curriculum_mix is not None and motion_pack is None:
+    raise ValueError("--motion-pack-clip-curriculum-mix requires --motion-pack")
+  if motion_pack_clip_curriculum_strength is not None and motion_pack is None:
+    raise ValueError("--motion-pack-clip-curriculum-strength requires --motion-pack")
+  if motion_pack_clip_curriculum_tau_scale is not None and motion_pack is None:
+    raise ValueError("--motion-pack-clip-curriculum-tau-scale requires --motion-pack")
+  if motion_pack_clip_curriculum_max_mult is not None and motion_pack is None:
+    raise ValueError("--motion-pack-clip-curriculum-max-mult requires --motion-pack")
 
 
 def get_motion_file(argv: list[str]) -> Path | None:
@@ -67,6 +90,36 @@ def get_motion_split(argv: list[str]) -> str | None:
 
 def get_motion_pack_sampling_mode(argv: list[str]) -> str | None:
   return get_flag_value(argv, ("--motion-pack-sampling-mode",))
+
+
+def get_motion_pack_clip_curriculum_mode(argv: list[str]) -> str | None:
+  return get_flag_value(argv, ("--motion-pack-clip-curriculum-mode",))
+
+
+def _parse_float_flag(argv: list[str], *, flag: str) -> float | None:
+  value = get_flag_value(argv, (flag,))
+  if value is None:
+    return None
+  try:
+    return float(value)
+  except ValueError as exc:
+    raise ValueError(f"Flag {flag} must be a float, got {value!r}") from exc
+
+
+def get_motion_pack_clip_curriculum_mix(argv: list[str]) -> float | None:
+  return _parse_float_flag(argv, flag="--motion-pack-clip-curriculum-mix")
+
+
+def get_motion_pack_clip_curriculum_strength(argv: list[str]) -> float | None:
+  return _parse_float_flag(argv, flag="--motion-pack-clip-curriculum-strength")
+
+
+def get_motion_pack_clip_curriculum_tau_scale(argv: list[str]) -> float | None:
+  return _parse_float_flag(argv, flag="--motion-pack-clip-curriculum-tau-scale")
+
+
+def get_motion_pack_clip_curriculum_max_mult(argv: list[str]) -> float | None:
+  return _parse_float_flag(argv, flag="--motion-pack-clip-curriculum-max-mult")
 
 
 def get_registry_name(argv: list[str]) -> str | None:

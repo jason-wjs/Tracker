@@ -33,6 +33,12 @@ class MotionPackCommandCfg(MotionCommandCfg):
   """Tracker extension to select which split to sample from."""
 
   motion_split: str = "train"
+  # Clip-wise curriculum (applies to clip selection, not within-clip time sampling).
+  clip_curriculum_mode: str = "ema_bin_failed"  # "ema_bin_failed" | "off"
+  clip_curriculum_mix: float = 1.0
+  clip_curriculum_strength: float = 2.0
+  clip_curriculum_tau_scale: float = 1.0
+  clip_curriculum_max_mult: float = 3.0
 
 
 @dataclass(frozen=True)
