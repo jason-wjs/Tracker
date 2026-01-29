@@ -65,6 +65,12 @@ def _register_tracking_tasks() -> None:
       lambda: adam_pro_29_flat_tracking_env_cfg(has_state_estimation=False, play=True),
       adam_pro_29_tracking_ppo_runner_cfg(),
     ),
+    (
+      "Tracker-Teleop-Flat-Adam-Pro-29-No-State-Estimation",
+      lambda: adam_pro_29_flat_tracking_env_cfg(has_state_estimation=False),
+      lambda: adam_pro_29_flat_tracking_env_cfg(has_state_estimation=False, play=True),
+      adam_pro_29_tracking_ppo_runner_cfg(),
+    ),
   ]
 
   for task_id, env_cfg_fn, play_env_cfg_fn, rl_cfg in task_specs:

@@ -16,3 +16,4 @@ def test_bootstrap_registers_adam_sp_task():
   assert "Tracker-Tracking-Flat-Adam-Pro-29" in tasks
   assert "Tracker-Tracking-Flat-Adam-Pro-23-No-State-Estimation" in tasks
   assert "Tracker-Tracking-Flat-Adam-Pro-29-No-State-Estimation" in tasks
+  assert "Tracker-Teleop-Flat-Adam-Pro-29-No-State-Estimation" in tasks
