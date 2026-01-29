@@ -21,6 +21,7 @@ from mjlab.utils.lab_api.math import (
 
 from tracker.motions.pack_loader import MotionPack
 from tracker.motions.adaptive_time_sampler import AdaptiveTimeBinSampler
+from tracker.motions.clip_curriculum import clip_hardness_from_bin_failed_count, hardness_to_multiplier
 from tracker.motions.sampling import HierarchicalSampler
 
 if TYPE_CHECKING:
@@ -290,9 +291,39 @@ class MultiClipMotionCommand(MjlabMotionCommand):
     )
 
   def _sample_motion(self, env_ids: torch.Tensor) -> None:
+    clip_multiplier: torch.Tensor | None = None
+    curriculum_mode = getattr(self.cfg, "clip_curriculum_mode", "off")
+    if curriculum_mode != "off":
+      if curriculum_mode != "ema_bin_failed":
+        raise ValueError(f"Unknown clip_curriculum_mode: {curriculum_mode!r}")
+
+      mix = float(getattr(self.cfg, "clip_curriculum_mix", 1.0))
+      strength = float(getattr(self.cfg, "clip_curriculum_strength", 2.0))
+      tau_scale = float(getattr(self.cfg, "clip_curriculum_tau_scale", 1.0))
+      max_mult = float(getattr(self.cfg, "clip_curriculum_max_mult", 3.0))
+
+      hardness_all = clip_hardness_from_bin_failed_count(self.adaptive_sampler.bin_failed_count)
+      clip_multiplier = torch.ones_like(hardness_all, dtype=torch.float32)
+
+      split_clip_ids = self.sampler.split_clip_ids
+      split_task_ids = torch.unique(self.pack.clip_task_id[split_clip_ids], sorted=True)
+      for task_id in split_task_ids.tolist():
+        candidates = split_clip_ids[
+          (self.pack.clip_task_id[split_clip_ids] == task_id).nonzero().flatten()
+        ]
+        if candidates.numel() == 0:
+          continue
+
+        h = hardness_all[candidates]
+        tau = tau_scale * h.mean()
+        mult = hardness_to_multiplier(h, tau=tau, strength=strength, m_max=max_mult)
+        effective_mult = (1.0 - mix) + mix * mult
+        clip_multiplier[candidates] = effective_mult
+
     clip_ids, task_ids, t = self.sampler.sample(
       n=int(env_ids.numel()),
       clip_len=self.pack.clip_len.to(dtype=torch.int64),
+      clip_multiplier=clip_multiplier,
     )
     self.clip_id[env_ids] = clip_ids
     self.task_id[env_ids] = task_ids

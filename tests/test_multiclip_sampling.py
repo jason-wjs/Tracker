@@ -106,3 +106,50 @@ def test_multiclip_command_adaptive_sampling_sets_metrics():
   assert torch.allclose(cmd.metrics["sampling_entropy"], torch.full((num_envs,), 0.3))
   assert torch.allclose(cmd.metrics["sampling_top1_prob"], torch.full((num_envs,), 0.8))
   assert torch.allclose(cmd.metrics["sampling_top1_bin"], torch.full((num_envs,), 0.6))
+
+
+def test_multiclip_command_global_clip_curriculum_biases_towards_hard_clips():
+  from types import SimpleNamespace
+
+  from tracker.motions.sampling import HierarchicalSampler
+  from tracker.tasks.tracking.multiclip_command import MultiClipMotionCommand
+
+  torch.manual_seed(0)
+
+  # One task bucket with 4 equal-length clips.
+  clip_task_id = torch.tensor([0, 0, 0, 0], dtype=torch.int64)
+  split_clip_ids = torch.arange(4, dtype=torch.int64)
+  clip_len = torch.tensor([100, 100, 100, 100], dtype=torch.int64)
+
+  cmd = MultiClipMotionCommand.__new__(MultiClipMotionCommand)
+  cmd.cfg = SimpleNamespace(
+    sampling_mode="uniform",
+    clip_curriculum_mode="ema_bin_failed",
+    clip_curriculum_mix=1.0,
+    clip_curriculum_strength=2.0,
+    clip_curriculum_tau_scale=1.0,
+    clip_curriculum_max_mult=3.0,
+  )
+  cmd.sampler = HierarchicalSampler(clip_task_id=clip_task_id, split_clip_ids=split_clip_ids)
+  cmd.pack = SimpleNamespace(clip_len=clip_len, clip_task_id=clip_task_id)
+
+  # Make clip 2 hard: high EMA failure count in one bin.
+  bin_failed_count = torch.zeros((4, 8), dtype=torch.float32)
+  bin_failed_count[2, 0] = 10.0
+  cmd.adaptive_sampler = SimpleNamespace(bin_failed_count=bin_failed_count)
+
+  num_envs = 20_000
+  cmd.clip_id = torch.zeros(num_envs, dtype=torch.int64)
+  cmd.task_id = torch.zeros(num_envs, dtype=torch.int64)
+  cmd.time_steps = torch.zeros(num_envs, dtype=torch.int64)
+  cmd.metrics = {
+    "sampling_entropy": torch.zeros(num_envs, dtype=torch.float32),
+    "sampling_top1_prob": torch.zeros(num_envs, dtype=torch.float32),
+    "sampling_top1_bin": torch.zeros(num_envs, dtype=torch.float32),
+  }
+
+  env_ids = torch.arange(num_envs, dtype=torch.int64)
+  cmd._sample_motion(env_ids)
+
+  counts = torch.bincount(cmd.clip_id, minlength=4).float()
+  assert counts[2] > counts.mean() * 1.5
