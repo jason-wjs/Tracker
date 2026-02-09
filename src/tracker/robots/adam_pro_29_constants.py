@@ -9,7 +9,7 @@ from pathlib import Path
 
 import mujoco
 
-from mjlab.actuator import BuiltinPositionActuatorCfg
+from mjlab.actuator import DcMotorActuatorCfg
 from mjlab.entity import EntityArticulationInfoCfg, EntityCfg
 from mjlab.utils.os import update_assets
 from mjlab.utils.spec_config import CollisionCfg
@@ -18,36 +18,67 @@ from tracker.assets.paths import get_asset_path
 
 ADAM_PRO_29_XML: Path = get_asset_path("adam_pro", "adam_pro_29dof.xml")
 
-# NOTE: As a first baseline, we assume Adam-Pro shares actuator baselines with Adam-SP.
-# Wrist parameters must be calibrated for Phase 1.5 completion criteria.
+# === Upper Body ===
+# shoulderPitch_Left / shoulderPitch_Right : PND-50-14A-50-S
+# shoulderRoll_Left  / shoulderRoll_Right  : PND-50-14A-50-S
+# shoulderYaw_Left   / shoulderYaw_Right   : PND-30-14A-50-S
+# elbow_Left         / elbow_Right         : PND-30-14A-50-S
+# wristYaw_Left      / wristYaw_Right      : PND-20-14A-50-S
+# wristPitch_Left    / wristPitch_Right    : PND-20-08-50-S
+# wristRoll_Left     / wristRoll_Right     : PND-20-08-50-S
 
-# Motor reflected inertia (armature) baselines.
-ARMATURE_130_92_7_P = 0.13426
-ARMATURE_50_14A_50_S = 0.1578807
-ARMATURE_30_14A_50_S = 0.0423963
-ARMATURE_60_17_50_S = 0.23409
-ARMATURE_80_20_30_S = 0.281573
-ARMATURE_50_52_30_P = 0.0549
+# === Waist ===
+# waistRoll  : PND-60-17-50-S
+# waistPitch : PND-60-17-50-S
+# waistYaw   : PND-60-17-50-S
+
+# === Lower Body ===
+# hipPitch_Left  / hipPitch_Right  : PND-130-92-7-P
+# hipRoll_Left   / hipRoll_Right   : PND-80-20-30-S
+# hipYaw_Left    / hipYaw_Right    : PND-60-17-50-S
+# kneePitch_Left / kneePitch_Right : PND-130-92-7-P
+# anklePitch_Left / anklePitch_Right : PND-50-52-30-P
+# ankleRoll_Left  / ankleRoll_Right  : PND-50-52-30-P
+
+# === Hands ===
+# hand_Left  : dexterous hand (no motor model)
+# hand_Right : dexterous hand (no motor model)
+
+# === Neck ===
+# neckYaw   : PND-60-17-50-S
+# neckPitch : PND-60-17-50-S
+
+
+# Motor reflected inertia (armature) baselines. (kg·m²)
+ARMATURE_130_92_7_P = 0.13427
+ARMATURE_50_14A_50_S = 0.15789
+ARMATURE_30_14A_50_S = 0.04240
+ARMATURE_60_17_50_S = 0.23410
+ARMATURE_80_20_30_S = 0.28158
+ARMATURE_50_52_30_P = 0.05491
+ARMATURE_20_14A_50_S = 0.01673
+ARMATURE_20_08_50_S = 0.01683
+
+## Theoretical PD gains under 10HZ natural frequency and critical damping (\zeta=1). (just for reference)
+# | Actuator             |      (I) | (K_p) (10 Hz) | (K_d) ((\zeta=1)) |
+# | -------------------- | -------: | ------------: | ----------------: |
+# | ARMATURE_130_92_7_P  | 0.134260 |    530.037235 |         16.871609 |
+# | ARMATURE_50_14A_50_S | 0.157880 |    623.285257 |         19.839786 |
+# | ARMATURE_30_14A_50_S | 0.042396 |    167.372699 |          5.327638 |
+# | ARMATURE_60_17_50_S  | 0.234090 |    924.150278 |         29.416617 |
+# | ARMATURE_80_20_30_S  | 0.281573 |   1111.605648 |         35.383507 |
+# | ARMATURE_50_52_30_P  | 0.054900 |    216.736513 |          6.898937 |
+# | ARMATURE_20_14A_50_S | 0.016724 |     66.023706 |          2.101600 |
+# | ARMATURE_20_08_50_S  | 0.016828 |     66.434281 |          2.114669 |
+
+
 
 ##
-# PD gains baselines.
+# PD gains baselines. (heuristic tuning)
 ##
 
-STIFFNESS_130_92_7_P = 305.0
+STIFFNESS_130_92_7_P = 350.0
 DAMPING_130_92_7_P = 5.0
-
-STIFFNESS_80_20_30_S = 255.0
-DAMPING_80_20_30_S = 3.5
-
-STIFFNESS_60_17_50_S = 255.0
-DAMPING_60_17_50_S = 3.5
-STIFFNESS_60_17_50_S_WAIST_PITCH = 305.0
-DAMPING_60_17_50_S_WAIST_PITCH = 5.0
-
-STIFFNESS_50_52_30_P_ANKLE_PITCH = 50.0
-DAMPING_50_52_30_P_ANKLE_PITCH = 0.8
-STIFFNESS_50_52_30_P_ANKLE_ROLL = 30.0
-DAMPING_50_52_30_P_ANKLE_ROLL = 0.35
 
 STIFFNESS_50_14A_50_S = 40.0
 DAMPING_50_14A_50_S = 1.0
@@ -55,20 +86,65 @@ DAMPING_50_14A_50_S = 1.0
 STIFFNESS_30_14A_50_S = 40.0
 DAMPING_30_14A_50_S = 1.0
 
+STIFFNESS_60_17_50_S = 255.0
+DAMPING_60_17_50_S = 3.5
+
+STIFFNESS_80_20_30_S = 255.0
+DAMPING_80_20_30_S = 3.5
+
+STIFFNESS_60_17_50_S_WAIST_PITCH = 305.0
+DAMPING_60_17_50_S_WAIST_PITCH = 5.0
+
+STIFFNESS_50_52_30_P_ANKLE_PITCH = 50.0
+DAMPING_50_52_30_P_ANKLE_PITCH = 0.8
+
+STIFFNESS_50_52_30_P_ANKLE_ROLL = 30.0
+DAMPING_50_52_30_P_ANKLE_ROLL = 0.35
+
+STIFFNESS_20_14A_50_S = 40
+DAMPING_20_14A_50_S = 1.5
+
+STIFFNESS_20_08_50_S = 40
+DAMPING_20_08_50_S = 1.5
+
 ##
-# Effort limits (N*m).
+# DC motor parameters from Speed-Torque curves.
+#   saturation_effort: peak/stall torque at 0 RPM (N·m)
+#   effort_limit: continuous rated torque (N·m)
+#   velocity_limit: no-load max speed (rad/s)
 ##
 
-EFFORT_LIMIT_130_92_7_P = 340.0
-EFFORT_LIMIT_80_20_30_S = 120.0
-EFFORT_LIMIT_60_17_50_S = 89.0
-EFFORT_LIMIT_50_52_30_P = 46.0
-EFFORT_LIMIT_50_14A_50_S = 60.0
-EFFORT_LIMIT_30_14A_50_S = 17.5
+SATURATION_EFFORT_130_92_7_P = 230.0
+EFFORT_LIMIT_130_92_7_P = 90.0
+VELOCITY_LIMIT_130_92_7_P = 18.85  # ~180 RPM
 
-# TODO(phase-1.5): Replace with trusted wrist baselines.
-EFFORT_LIMIT_WRIST = 6.4
-ARMATURE_WRIST = ARMATURE_30_14A_50_S
+SATURATION_EFFORT_80_20_30_S = 120.0
+EFFORT_LIMIT_80_20_30_S = 42.0
+VELOCITY_LIMIT_80_20_30_S = 8.38  # ~80 RPM
+
+SATURATION_EFFORT_60_17_50_S = 89.0
+EFFORT_LIMIT_60_17_50_S = 29.0
+VELOCITY_LIMIT_60_17_50_S = 4.92  # ~47 RPM
+
+SATURATION_EFFORT_50_52_30_P = 46.0
+EFFORT_LIMIT_50_52_30_P = 18.0
+VELOCITY_LIMIT_50_52_30_P = 8.38  # ~80 RPM
+
+SATURATION_EFFORT_50_14A_50_S = 60.0
+EFFORT_LIMIT_50_14A_50_S = 25.0
+VELOCITY_LIMIT_50_14A_50_S = 4.92  # ~47 RPM
+
+SATURATION_EFFORT_30_14A_50_S = 17.5
+EFFORT_LIMIT_30_14A_50_S = 6.3
+VELOCITY_LIMIT_30_14A_50_S = 4.92  # ~47 RPM
+
+SATURATION_EFFORT_20_14A_50_S = 6.2
+EFFORT_LIMIT_20_14A_50_S = 1.7
+VELOCITY_LIMIT_20_14A_50_S = 4.92  # ~47 RPM
+
+SATURATION_EFFORT_20_08_50_S = 6.4
+EFFORT_LIMIT_20_08_50_S = 2.1
+VELOCITY_LIMIT_20_08_50_S = 4.92  # ~47 RPM
 
 FRICTIONLOSS_LEG = 0.05
 FRICTIONLOSS_ANKLE = 0.02
@@ -98,93 +174,124 @@ def _baseline_joint_damping(joint_name: str) -> float:
   return DOF_DAMPING_DEFAULT
 
 
-ADAM_PRO_29_ACT_LEG_PITCH = BuiltinPositionActuatorCfg(
+ADAM_PRO_29_ACT_LEG_PITCH = DcMotorActuatorCfg(
   target_names_expr=(r"hipPitch_.*", r"kneePitch_.*"),
   stiffness=STIFFNESS_130_92_7_P,
   damping=DAMPING_130_92_7_P,
   effort_limit=EFFORT_LIMIT_130_92_7_P,
+  saturation_effort=SATURATION_EFFORT_130_92_7_P,
+  velocity_limit=VELOCITY_LIMIT_130_92_7_P,
   armature=ARMATURE_130_92_7_P,
   frictionloss=FRICTIONLOSS_LEG,
 )
 
-ADAM_PRO_29_ACT_LEG_ROLL = BuiltinPositionActuatorCfg(
+ADAM_PRO_29_ACT_LEG_ROLL = DcMotorActuatorCfg(
   target_names_expr=(r"hipRoll_.*",),
   stiffness=STIFFNESS_80_20_30_S,
   damping=DAMPING_80_20_30_S,
   effort_limit=EFFORT_LIMIT_80_20_30_S,
+  saturation_effort=SATURATION_EFFORT_80_20_30_S,
+  velocity_limit=VELOCITY_LIMIT_80_20_30_S,
   armature=ARMATURE_80_20_30_S,
   frictionloss=FRICTIONLOSS_LEG,
 )
 
-ADAM_PRO_29_ACT_LEG_YAW = BuiltinPositionActuatorCfg(
+ADAM_PRO_29_ACT_LEG_YAW = DcMotorActuatorCfg(
   target_names_expr=(r"hipYaw_.*",),
   stiffness=STIFFNESS_60_17_50_S,
   damping=DAMPING_60_17_50_S,
   effort_limit=EFFORT_LIMIT_60_17_50_S,
+  saturation_effort=SATURATION_EFFORT_60_17_50_S,
+  velocity_limit=VELOCITY_LIMIT_60_17_50_S,
   armature=ARMATURE_60_17_50_S,
   frictionloss=FRICTIONLOSS_LEG,
 )
 
-ADAM_PRO_29_ACT_ANKLE_PITCH = BuiltinPositionActuatorCfg(
+ADAM_PRO_29_ACT_ANKLE_PITCH = DcMotorActuatorCfg(
   target_names_expr=(r"anklePitch_.*",),
   stiffness=STIFFNESS_50_52_30_P_ANKLE_PITCH,
   damping=DAMPING_50_52_30_P_ANKLE_PITCH,
   effort_limit=EFFORT_LIMIT_50_52_30_P,
+  saturation_effort=SATURATION_EFFORT_50_52_30_P,
+  velocity_limit=VELOCITY_LIMIT_50_52_30_P,
   armature=ARMATURE_50_52_30_P,
   frictionloss=FRICTIONLOSS_ANKLE,
 )
 
-ADAM_PRO_29_ACT_ANKLE_ROLL = BuiltinPositionActuatorCfg(
+ADAM_PRO_29_ACT_ANKLE_ROLL = DcMotorActuatorCfg(
   target_names_expr=(r"ankleRoll_.*",),
   stiffness=STIFFNESS_50_52_30_P_ANKLE_ROLL,
   damping=DAMPING_50_52_30_P_ANKLE_ROLL,
   effort_limit=EFFORT_LIMIT_50_52_30_P,
+  saturation_effort=SATURATION_EFFORT_50_52_30_P,
+  velocity_limit=VELOCITY_LIMIT_50_52_30_P,
   armature=ARMATURE_50_52_30_P,
   frictionloss=FRICTIONLOSS_ANKLE,
 )
 
-ADAM_PRO_29_ACT_WAIST_ROLL_YAW = BuiltinPositionActuatorCfg(
+ADAM_PRO_29_ACT_WAIST_ROLL_YAW = DcMotorActuatorCfg(
   target_names_expr=(r"waistRoll", r"waistYaw"),
   stiffness=STIFFNESS_60_17_50_S,
   damping=DAMPING_60_17_50_S,
   effort_limit=EFFORT_LIMIT_60_17_50_S,
+  saturation_effort=SATURATION_EFFORT_60_17_50_S,
+  velocity_limit=VELOCITY_LIMIT_60_17_50_S,
   armature=ARMATURE_60_17_50_S,
   frictionloss=FRICTIONLOSS_WAIST,
 )
 
-ADAM_PRO_29_ACT_WAIST_PITCH = BuiltinPositionActuatorCfg(
+ADAM_PRO_29_ACT_WAIST_PITCH = DcMotorActuatorCfg(
   target_names_expr=(r"waistPitch",),
   stiffness=STIFFNESS_60_17_50_S_WAIST_PITCH,
   damping=DAMPING_60_17_50_S_WAIST_PITCH,
   effort_limit=EFFORT_LIMIT_60_17_50_S,
+  saturation_effort=SATURATION_EFFORT_60_17_50_S,
+  velocity_limit=VELOCITY_LIMIT_60_17_50_S,
   armature=ARMATURE_60_17_50_S,
   frictionloss=FRICTIONLOSS_WAIST,
 )
 
-ADAM_PRO_29_ACT_SHOULDER = BuiltinPositionActuatorCfg(
+ADAM_PRO_29_ACT_SHOULDER = DcMotorActuatorCfg(
   target_names_expr=(r"shoulderPitch_.*", r"shoulderRoll_.*"),
   stiffness=STIFFNESS_50_14A_50_S,
   damping=DAMPING_50_14A_50_S,
   effort_limit=EFFORT_LIMIT_50_14A_50_S,
+  saturation_effort=SATURATION_EFFORT_50_14A_50_S,
+  velocity_limit=VELOCITY_LIMIT_50_14A_50_S,
   armature=ARMATURE_50_14A_50_S,
   frictionloss=FRICTIONLOSS_SHOULDER,
 )
 
-ADAM_PRO_29_ACT_ELBOW = BuiltinPositionActuatorCfg(
+ADAM_PRO_29_ACT_ELBOW = DcMotorActuatorCfg(
   target_names_expr=(r"shoulderYaw_.*", r"elbow_.*"),
   stiffness=STIFFNESS_30_14A_50_S,
   damping=DAMPING_30_14A_50_S,
   effort_limit=EFFORT_LIMIT_30_14A_50_S,
+  saturation_effort=SATURATION_EFFORT_30_14A_50_S,
+  velocity_limit=VELOCITY_LIMIT_30_14A_50_S,
   armature=ARMATURE_30_14A_50_S,
   frictionloss=FRICTIONLOSS_ELBOW,
 )
 
-ADAM_PRO_29_ACT_WRIST = BuiltinPositionActuatorCfg(
-  target_names_expr=(r"wristYaw_.*", r"wristPitch_.*", r"wristRoll_.*"),
-  stiffness=STIFFNESS_30_14A_50_S,
-  damping=DAMPING_30_14A_50_S,
-  effort_limit=EFFORT_LIMIT_WRIST,
-  armature=ARMATURE_WRIST,
+ADAM_PRO_29_ACT_WRIST_YAW = DcMotorActuatorCfg(
+  target_names_expr=(r"wristYaw_.*",),
+  stiffness=STIFFNESS_20_14A_50_S,
+  damping=DAMPING_20_14A_50_S,
+  effort_limit=EFFORT_LIMIT_20_14A_50_S,
+  saturation_effort=SATURATION_EFFORT_20_14A_50_S,
+  velocity_limit=VELOCITY_LIMIT_20_14A_50_S,
+  armature=ARMATURE_20_14A_50_S,
+  frictionloss=FRICTIONLOSS_WRIST,
+)
+
+ADAM_PRO_29_ACT_WRIST_PITCH_ROLL = DcMotorActuatorCfg(
+  target_names_expr=(r"wristPitch_.*", r"wristRoll_.*"),
+  stiffness=STIFFNESS_20_08_50_S,
+  damping=DAMPING_20_08_50_S,
+  effort_limit=EFFORT_LIMIT_20_08_50_S,
+  saturation_effort=SATURATION_EFFORT_20_08_50_S,
+  velocity_limit=VELOCITY_LIMIT_20_08_50_S,
+  armature=ARMATURE_20_08_50_S,
   frictionloss=FRICTIONLOSS_WRIST,
 )
 
@@ -199,7 +306,8 @@ ADAM_PRO_29_ARTICULATION = EntityArticulationInfoCfg(
     ADAM_PRO_29_ACT_WAIST_PITCH,
     ADAM_PRO_29_ACT_SHOULDER,
     ADAM_PRO_29_ACT_ELBOW,
-    ADAM_PRO_29_ACT_WRIST,
+    ADAM_PRO_29_ACT_WRIST_YAW,
+    ADAM_PRO_29_ACT_WRIST_PITCH_ROLL,
   ),
   soft_joint_pos_limit_factor=0.9,
 )
@@ -293,9 +401,8 @@ def get_adam_pro_29_robot_cfg() -> EntityCfg:
 
 ADAM_PRO_29_ACTION_SCALE: dict[str, float] = {}
 for actuator in ADAM_PRO_29_ARTICULATION.actuators:
-  assert isinstance(actuator, BuiltinPositionActuatorCfg)
-  effort = actuator.effort_limit
+  assert isinstance(actuator, DcMotorActuatorCfg)
+  effort = actuator.saturation_effort
   stiffness = actuator.stiffness
-  assert effort is not None
   for expr in actuator.target_names_expr:
     ADAM_PRO_29_ACTION_SCALE[expr] = 0.25 * effort / stiffness
