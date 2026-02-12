@@ -11,8 +11,10 @@ from collections.abc import Callable
 from mjlab.tasks.registry import register_mjlab_task
 from mjlab.tasks.tracking.rl import MotionTrackingOnPolicyRunner
 
+from tracker.rl.teleop_actor_critic import register_rsl_rl_teleop_policy
 from tracker.tasks.tracking.config.env import (
   adam_pro_29_flat_tracking_env_cfg,
+  adam_pro_29_flat_teleop_env_cfg,
   adam_pro_flat_tracking_env_cfg,
   adam_sp_29_flat_tracking_env_cfg,
   adam_sp_flat_tracking_env_cfg,
@@ -20,6 +22,7 @@ from tracker.tasks.tracking.config.env import (
 from tracker.tasks.tracking.config.rl import (
   adam_pro_23_tracking_ppo_runner_cfg,
   adam_pro_29_tracking_ppo_runner_cfg,
+  adam_pro_29_teleop_ppo_runner_cfg,
   adam_sp_23_tracking_ppo_runner_cfg,
   adam_sp_29_tracking_ppo_runner_cfg,
 )
@@ -28,6 +31,8 @@ EnvCfgFn = Callable[[], object]
 
 
 def _register_tracking_tasks() -> None:
+  register_rsl_rl_teleop_policy()
+
   task_specs: list[tuple[str, EnvCfgFn, EnvCfgFn, object]] = [
     (
       "Tracker-Tracking-Flat-Adam-SP-23",
@@ -67,9 +72,9 @@ def _register_tracking_tasks() -> None:
     ),
     (
       "Tracker-Teleop-Flat-Adam-Pro-29-No-State-Estimation",
-      lambda: adam_pro_29_flat_tracking_env_cfg(has_state_estimation=False),
-      lambda: adam_pro_29_flat_tracking_env_cfg(has_state_estimation=False, play=True),
-      adam_pro_29_tracking_ppo_runner_cfg(),
+      lambda: adam_pro_29_flat_teleop_env_cfg(has_state_estimation=False),
+      lambda: adam_pro_29_flat_teleop_env_cfg(has_state_estimation=False, play=True),
+      adam_pro_29_teleop_ppo_runner_cfg(),
     ),
   ]
 

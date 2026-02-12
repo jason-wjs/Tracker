@@ -63,3 +63,9 @@ def adam_pro_29_tracking_ppo_runner_cfg() -> RslRlOnPolicyRunnerCfg:
   cfg.experiment_name = "adam_pro_tracking_29"
   return cfg
 
+
+def adam_pro_29_teleop_ppo_runner_cfg() -> RslRlOnPolicyRunnerCfg:
+  """Create RL runner configuration for Adam-Pro (29-DoF) teleop task."""
+  cfg = adam_pro_29_tracking_ppo_runner_cfg()
+  cfg.policy.class_name = "TrackerActorCriticTeleop"
+  return cfg

@@ -125,3 +125,31 @@ def adam_pro_29_flat_tracking_env_cfg(
     has_state_estimation=has_state_estimation,
     play=play,
   )
+
+
+def adam_pro_29_flat_teleop_env_cfg(
+  *,
+  has_state_estimation: bool = True,
+  play: bool = False,
+  history_length: int = 8,
+) -> ManagerBasedRlEnvCfg:
+  """Create teleop (multi-clip) config with short policy observation history.
+
+  This uses mjlab's built-in observation history buffers so training/eval/play
+  share the same observation interface without modifying mjlab itself.
+  """
+  cfg = adam_pro_29_flat_tracking_env_cfg(
+    has_state_estimation=has_state_estimation,
+    play=play,
+  )
+  # Prefer selective history (TWIST2-style): keep commands/reference terms
+  # current-only, while providing short temporal context for proprio/actions.
+  cfg.observations["policy"].history_length = None
+  cfg.observations["policy"].flatten_history_dim = True
+
+  policy_terms = cfg.observations["policy"].terms
+  for term_name in ("joint_pos", "joint_vel", "base_ang_vel", "actions"):
+    if term_name in policy_terms:
+      policy_terms[term_name].history_length = history_length
+      policy_terms[term_name].flatten_history_dim = True
+  return cfg
